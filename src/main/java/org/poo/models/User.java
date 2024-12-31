@@ -20,13 +20,18 @@ public class User {
     private final String email;
     private final List<Account> accounts;
     private List<Transaction> transactions;
+    private final String birthDate;
+    private final String occupation;
 
-    public User(final String firstName, final String lastName, final String email) {
+    public User(final String firstName, final String lastName, final String email
+            , final String birthDate, final String occupation) {
         this.firstName = firstName;
         this.lastName = lastName;
         this.email = email;
         this.accounts = new ArrayList<>();
         transactions = new ArrayList<>();
+        this.birthDate = birthDate;
+        this.occupation = occupation;
     }
 
     /**

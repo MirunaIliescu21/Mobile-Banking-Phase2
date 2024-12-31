@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import org.poo.fileio.CommandInput;
 import org.poo.models.User;
+import org.poo.services.Commerciant;
 import org.poo.services.CurrencyConverter;
 
 import java.util.List;
@@ -15,10 +16,11 @@ public class CommandExecutor {
     private final CommandContext context;
 
     public CommandExecutor(final List<User> users,
+                           final List<Commerciant> commerciants,
                            final ObjectMapper objectMapper,
                            final ArrayNode output,
                            final CurrencyConverter currencyConverter) {
-        this.context = new CommandContext(users, objectMapper, output, currencyConverter);
+        this.context = new CommandContext(users, commerciants, objectMapper, output, currencyConverter);
     }
 
     /**

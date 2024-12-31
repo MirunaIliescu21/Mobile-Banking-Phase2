@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import lombok.Getter;
 import org.poo.models.User;
+import org.poo.services.Commerciant;
 import org.poo.services.CurrencyConverter;
 
 import java.util.List;
@@ -18,15 +19,18 @@ import java.util.List;
  */
 public class CommandContext {
     private final List<User> users;
+    private final List<Commerciant> commerciants;
     private final ObjectMapper objectMapper;
     private final ArrayNode output;
     private final CurrencyConverter currencyConverter;
 
     public CommandContext(final List<User> users,
+                          final List<Commerciant> commerciants,
                           final ObjectMapper objectMapper,
                           final ArrayNode output,
                           final CurrencyConverter currencyConverter) {
         this.users = users;
+        this.commerciants = commerciants;
         this.objectMapper = objectMapper;
         this.output = output;
         this.currencyConverter = currencyConverter;

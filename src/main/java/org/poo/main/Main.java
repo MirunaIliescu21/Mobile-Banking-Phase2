@@ -6,11 +6,9 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import org.poo.checker.Checker;
 import org.poo.checker.CheckerConstants;
 import org.poo.commands.CommandExecutor;
-import org.poo.fileio.CommandInput;
-import org.poo.fileio.ExchangeInput;
-import org.poo.fileio.ObjectInput;
-import org.poo.fileio.UserInput;
+import org.poo.fileio.*;
 import org.poo.models.User;
+import org.poo.services.Commerciant;
 import org.poo.services.CurrencyConverter;
 import org.poo.services.ExchangeRate;
 import org.poo.utils.Utils;
@@ -91,7 +89,9 @@ public final class Main {
         for (UserInput userInput : inputData.getUsers()) {
             users.add(new User(userInput.getFirstName(),
                     userInput.getLastName(),
-                    userInput.getEmail()));
+                    userInput.getEmail(),
+                    userInput.getBirthDate(),
+                    userInput.getOccupation()));
         }
 
         // Extract the list of exchange rates from inputData
@@ -107,9 +107,28 @@ public final class Main {
         }
         CurrencyConverter currencyConverter = new CurrencyConverter(exchangeRates);
 
+        // Extract the list of commercianți
+        List<Commerciant> commerciants = new ArrayList<>();
+        if (inputData.getCommerciants() != null) {
+            for (CommerciantInput commercInput : inputData.getCommerciants()) {
+                commerciants.add(new Commerciant(
+                        commercInput.getCommerciant(),
+                        commercInput.getId(),
+                        commercInput.getAccount(),
+                        commercInput.getType(),
+                        commercInput.getCashbackStrategy()
+                ));
+            }
+        }
+
+        System.out.println("List of commerciants:");
+        for (Commerciant commerciant : commerciants) {
+            System.out.println(commerciant);
+        }
+
         // Initialize CommandExecutor with context
-        CommandExecutor commandExecutor = new CommandExecutor(users, objectMapper,
-                                                              output,
+        CommandExecutor commandExecutor = new CommandExecutor(users, commerciants,
+                                                              objectMapper, output,
                                                               currencyConverter);
 
         // Execute each command
