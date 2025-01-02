@@ -137,7 +137,8 @@ public final class Main {
                 commandExecutor.execute(command);
             } catch (Exception e) {
                 // Log or handle generic exceptions to avoid stopping execution
-                System.err.println("Error executing command: " + command.getCommand());
+                System.err.println("Error executing command: " + command.getCommand()
+                        + " " + e.getMessage() + " " + command.getTimestamp());
             }
         }
 

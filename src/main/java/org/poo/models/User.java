@@ -10,9 +10,7 @@ import org.poo.services.*;
 
 import java.time.LocalDate;
 import java.time.Period;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Data
 /**
@@ -28,6 +26,8 @@ public class User {
     private final String birthDate;
     private final String occupation;
     private ServicePlan currentPlan;
+    private Set<String> receivedCashbacks = new HashSet<>(); // Ex. "Food", "Clothes", "Tech"
+    private double totalSpending;
 
     public User(final String firstName, final String lastName, final String email
             , final String birthDate, final String occupation) {
@@ -40,6 +40,7 @@ public class User {
         this.occupation = occupation;
         // Set the default plan based on the occupation
         currentPlan = occupation.equals("student") ? new StudentPlan() : new StandardPlan();
+        totalSpending = 0;
     }
 
     /**
@@ -176,6 +177,8 @@ public class User {
             return "destroyCard";
         } else if (transaction.getDescription().equalsIgnoreCase("Card payment")) {
             return "cardPayment";
+        } else if (transaction.getDescription().equalsIgnoreCase("Interest rate income")) {
+            return "addInterest";
         } else if (transaction.getInvolvedAccounts() != null) {
             return "splitPayment";
         } else if (transaction.getCurrentPlan() != null) {
@@ -331,7 +334,6 @@ public class User {
         System.out.println("Calculating transaction count for commerciant: " + commerciant.getName());
         int count = 0;
         for (Transaction transaction : transactions) {
-            System.out.println("Transaction: " + transaction.getDescription());
             System.out.println("Transaction commerciant: " + transaction.getCommerciant());
             if (transaction.getCommerciant() == null) {
                 continue;
@@ -345,15 +347,13 @@ public class User {
         return count;
     }
 
-    public double getTotalSpendingInCurrency(CurrencyConverter converter, String targetCurrency) throws CurrencyConversionException {
-        double totalSpending = 0.0;
-        for (Transaction transaction : transactions) {
-            if (transaction.getDescription().equals("Card payment") && transaction.getAmount() > 0) {
-                totalSpending += converter.convertCurrency(transaction.getAmount(),
-                        transaction.getAmountCurrency(),
-                        targetCurrency);
-            }
-        }
-        return totalSpending;
+    // Verifică dacă utilizatorul a primit cashback pentru o categorie specifică
+    public boolean hasReceivedCashback(String category) {
+        return receivedCashbacks.contains(category);
+    }
+
+    // Marchează categoria ca fiind primită
+    public void setCashbackReceived(String category) {
+        receivedCashbacks.add(category);
     }
 }

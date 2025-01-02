@@ -1,5 +1,6 @@
 package org.poo.services;
 
+import org.poo.exceptions.CurrencyConversionException;
 import org.poo.models.Transaction;
 import org.poo.models.User;
 
@@ -8,8 +9,10 @@ import org.poo.models.User;
  */
 public class SpendingThresholdCashback implements CashbackStrategy {
     @Override
-    public double calculateCashback(User user, Commerciant commerciant, double totalSpending) {
+    public double calculateCashback(User user, Commerciant commerciant, double spendingAmount) {
         System.out.println("calculateCashback for SpendingThresholdCashback");
+        double totalSpending = user.getTotalSpending();
+        System.out.println("Total spending: " + totalSpending);
         double cashbackRate = 0;
 
         if (totalSpending >= 500) {
@@ -32,6 +35,6 @@ public class SpendingThresholdCashback implements CashbackStrategy {
             }
         }
 
-        return totalSpending * cashbackRate;
+        return spendingAmount * cashbackRate;
     }
 }

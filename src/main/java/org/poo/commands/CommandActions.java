@@ -98,6 +98,10 @@ public final class CommandActions {
             user.addAccount(new Account(iban, command.getCurrency(),
                     command.getAccountType(), command.getEmail()));
 
+            if (command.getAccountType().equals("savings")) {
+                user.findAccountByIban(iban).setInterestRate(command.getInterestRate());
+            }
+
             Transaction transaction = new Transaction.TransactionBuilder(command.getTimestamp(),
                     "New account created", iban)
                     .build();
@@ -174,10 +178,12 @@ public final class CommandActions {
      * @param command the command to be executed
      */
     public void addFunds(final CommandInput command, final CommandContext context) {
+        System.out.println("addFunds " + command.getTimestamp());
         for (User user : context.getUsers()) {
             Account account = user.findAccountByIban(command.getAccount());
             if (account != null) {
                 account.addFunds(command.getAmount());
+                System.out.println("account balance " + account.getIban() + " adaugarea de fonduri: " + account.getBalance() + " " + account.getCurrency());
                 break;
             }
         }
@@ -505,6 +511,15 @@ public final class CommandActions {
             System.out.println("commerciant: " + commerciant.getName() + " " + commerciant.getType());
 
             CashbackStrategy cashbackStrategy = commerciant.getCashbackStrategyInstance();
+            if (commerciant.getCashbackStrategy().equals("spendingThreshold")) {
+                double amountInRON;
+                amountInRON = context.getCurrencyConverter().
+                        convertCurrency(command.getAmount(),
+                                command.getCurrency(),
+                                "RON");
+                System.out.println("amountInRON: " + amountInRON + " RON");
+                user.setTotalSpending(user.getTotalSpending() + amountInRON);
+            }
             double cashback = cashbackStrategy.calculateCashback(user, commerciant, amountInAccountCurrency);
             System.out.println("cashback: " + cashback);
 
@@ -526,6 +541,7 @@ public final class CommandActions {
             if (cardUser.getStatus().equals("active")
                     && accountUser.getBalance() >= accountUser.getMinimumBalance()) {
                 cardUser.setStatus("active");
+                System.out.println("S-A EFECTUAT TRANZACTIA CU SUCCES account balance " + accountUser.getIban() + " plata online: " + accountUser.getBalance() + " " + accountUser.getCurrency());
                 Transaction transaction = new Transaction.TransactionBuilder(timestamp,
                         "Card payment", accountUser.getIban())
                         .amount(amountInAccountCurrency)
@@ -601,7 +617,7 @@ public final class CommandActions {
 
         try {
             if (senderAccount == null || receiverAccount == null) {
-                throw new AccountNotFoundException("One or both accounts not found.");
+                throw new AccountNotFoundException("Commerciant not found");
             }
 
             senderUser = findUserByEmail(context.getUsers(), senderEmail);
@@ -621,6 +637,8 @@ public final class CommandActions {
             senderUser.addTransaction(transaction);
             throw new InsufficientFundsException("Insufficient funds.");
         } catch (AccountNotFoundException | UserNotFoundException e) {
+            addError(context.getOutput(), e.getMessage(),
+                    command.getTimestamp(), "sendMoney");
             return;
         }
     }
@@ -998,7 +1016,7 @@ public final class CommandActions {
         // Create the principal node for the output
         ObjectNode reportNode = context.getObjectMapper().createObjectNode();
         reportNode.put("IBAN", account.getIban());
-        reportNode.put("balance", account.getBalance());
+        reportNode.put("balance", roundToTwoDecimals(account.getBalance()));
         reportNode.put("currency", account.getCurrency());
 
         // Filter the transactions and add them to the transactions node
@@ -1071,13 +1089,33 @@ public final class CommandActions {
             if (account == null) {
                 throw new AccountNotFoundException("Account not found");
             }
-
+            double rate;
             if (account.getType().equals("savings")) {
-                account.addFunds(account.getBalance() * account.getInterestRate());
-                return;
+                rate = account.getInterestRate() * account.getBalance();
+                rate = roundToTwoDecimals(rate);
+                System.out.println("rate: " + rate);
+                account.addFunds(rate);
+                System.out.println("Interest added to account " + account.getIban() + " " + account.getBalance() + " " + account.getCurrency());
+            } else {
+                throw new IllegalArgumentException("This is not a savings account");
             }
-            throw new IllegalArgumentException("This is not a savings account");
-        } catch (AccountNotFoundException | IllegalArgumentException e) {
+
+            User user = User.findUserByAccount(context.getUsers(), account);
+            if (user == null) {
+                throw new UserNotFoundException("User not found");
+            }
+
+            Transaction transaction = new Transaction.TransactionBuilder(command.getTimestamp(),
+                    "Interest rate income", account.getIban())
+                    .amount(rate)
+                    .amountCurrency(account.getCurrency())
+                    .build();
+
+            System.out.println("amount in transaction: " + transaction.getAmount());
+
+            user.addTransaction(transaction);
+
+        } catch (AccountNotFoundException | IllegalArgumentException | UserNotFoundException e) {
             CommandActions.addError(context.getOutput(), e.getMessage(),
                     command.getTimestamp(), command.getCommand());
         }
@@ -1123,7 +1161,7 @@ public final class CommandActions {
         String accountIBAN = command.getAccount();
         double amount = command.getAmount();
         String currency = command.getCurrency();
-
+        System.out.println("withdrawSavings " + command.getTimestamp());
         Account account = User.findAccountByIBAN(context.getUsers(), command.getAccount());
         if (account == null) {
             addError(context.getOutput(), "Account not found",
@@ -1279,7 +1317,7 @@ public final class CommandActions {
                     command.getTimestamp(), "upgradePlan");
             return;
         }
-        System.out.println("convertedFee: " + convertedFee);
+        System.out.println("convertedFee: " + convertedFee + " " + account.getCurrency());
 
         if (account.getBalance() < convertedFee) {
             Transaction transaction = new Transaction.TransactionBuilder(command.getTimestamp(),
@@ -1364,8 +1402,14 @@ public final class CommandActions {
             double finalAmount = amount + commission;
             System.out.println("finalAmount: " + finalAmount);
 
+            double amountInAccountCurrency;
+            amountInAccountCurrency = context.getCurrencyConverter().
+                    convertCurrency(finalAmount,
+                    "RON",
+                    accountUser.getCurrency());
+
             // Check if the card is active amd if the account has enough funds
-            double newBalance = accountUser.getBalance() - finalAmount;
+            double newBalance = accountUser.getBalance() - amountInAccountCurrency;
             if (newBalance < accountUser.getMinimumBalance()) {
                 if (cardUser.getStatus().equals("active")
                         && finalAmount > accountUser.getBalance()) {
@@ -1374,10 +1418,11 @@ public final class CommandActions {
             }
 
             // Make the payment
-            accountUser.setBalance(accountUser.getBalance() - finalAmount);
+            accountUser.setBalance(accountUser.getBalance() - amountInAccountCurrency);
             if (cardUser.getStatus().equals("active")
                     && accountUser.getBalance() >= accountUser.getMinimumBalance()) {
                 cardUser.setStatus("active");
+                System.out.println("S-A extras bani CU SUCCES account balance " + accountUser.getIban() + " plata online: " + accountUser.getBalance() + " " + accountUser.getCurrency());
                 Transaction transaction = new Transaction.TransactionBuilder(timestamp,
                         "Cash withdrawal of " + amount, accountUser.getIban())
                         .amount(amount)
@@ -1391,13 +1436,18 @@ public final class CommandActions {
                 accountUser.setBalance(accountUser.getBalance() + finalAmount);
                 throw new UnauthorizedCardStatusException("The card is frozen");
             }
-        } catch (UserNotFoundException | CardNotFoundException | UnauthorizedCardAccessException e) {
+        } catch (UserNotFoundException | CardNotFoundException | UnauthorizedCardAccessException |
+                 CurrencyConversionException e) {
             addError(context.getOutput(), e.getMessage(), timestamp, "cashWithdrawal");
         } catch (InsufficientFundsException | UnauthorizedCardStatusException e) {
             // Add a transaction to the account
             Transaction transaction = new Transaction.TransactionBuilder(timestamp,
                     e.getMessage(), accountUser.getIban()).build();
             user.addTransaction(transaction);
+        } catch (IllegalArgumentException e) {
+            // Add an error to the output if the currency conversion is not supported
+            addError(context.getOutput(), "Currency conversion not supported",
+                    timestamp, "cashWithdrawal");
         }
     }
 
