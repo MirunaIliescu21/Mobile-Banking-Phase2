@@ -327,13 +327,21 @@ public class User {
         return count;
     }
 
-    public int getTransactionCountByCommerciant(final Commerciant commerciant) {
+    public int getTransactionCountByCommerciant(final Commerciant commerciant, final List<Transaction> transactions) {
+        System.out.println("Calculating transaction count for commerciant: " + commerciant.getName());
         int count = 0;
         for (Transaction transaction : transactions) {
+            System.out.println("Transaction: " + transaction.getDescription());
+            System.out.println("Transaction commerciant: " + transaction.getCommerciant());
+            if (transaction.getCommerciant() == null) {
+                continue;
+            }
+
             if (transaction.getCommerciant().equals(commerciant.getName())) {
                 count++;
             }
         }
+        System.out.println("Transaction count: " + count);
         return count;
     }
 

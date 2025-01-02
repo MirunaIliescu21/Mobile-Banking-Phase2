@@ -9,6 +9,7 @@ import org.poo.models.User;
 public class SpendingThresholdCashback implements CashbackStrategy {
     @Override
     public double calculateCashback(User user, Commerciant commerciant, double totalSpending) {
+        System.out.println("calculateCashback for SpendingThresholdCashback");
         double cashbackRate = 0;
 
         if (totalSpending >= 500) {

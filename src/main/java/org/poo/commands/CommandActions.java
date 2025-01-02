@@ -457,6 +457,7 @@ public final class CommandActions {
                                                                UnauthorizedCardAccessException,
                                                                InsufficientFundsException,
                                                                UnauthorizedCardStatusException {
+            System.out.println("payOnline " + command.getTimestamp());
         String email = command.getEmail();
         String cardNumber = command.getCardNumber();
         int timestamp = command.getTimestamp();
@@ -502,8 +503,8 @@ public final class CommandActions {
             // Calculate cashback
             Commerciant commerciant = context.findCommerciantByName(command.getCommerciant());
             System.out.println("commerciant: " + commerciant.getName() + " " + commerciant.getType());
+
             CashbackStrategy cashbackStrategy = commerciant.getCashbackStrategyInstance();
-            System.out.println("cashbackStrategy: " + cashbackStrategy.getClass().getSimpleName());
             double cashback = cashbackStrategy.calculateCashback(user, commerciant, amountInAccountCurrency);
             System.out.println("cashback: " + cashback);
 

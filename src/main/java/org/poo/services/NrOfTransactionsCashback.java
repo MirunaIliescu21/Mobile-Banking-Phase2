@@ -9,7 +9,8 @@ import org.poo.models.User;
 public class NrOfTransactionsCashback implements CashbackStrategy {
     @Override
     public double calculateCashback(User user, Commerciant commerciant, double spedingAmount) {
-        int transactionCount = user.getTransactionCountByCommerciant(commerciant);
+        System.out.println("calculateCashback for NrOfTransactionsCashback");
+        int transactionCount = user.getTransactionCountByCommerciant(commerciant, user.getTransactions());
         double cashbackRate = 0;
 
         if (transactionCount >= 2 && commerciant.getType().equals("Food")) {
@@ -21,7 +22,7 @@ public class NrOfTransactionsCashback implements CashbackStrategy {
         if (transactionCount >= 10 && commerciant.getType().equals("Tech")) {
             cashbackRate = 0.10;
         }
-
+        System.out.println("Cashback for " + transactionCount + " transactions: " + spedingAmount * cashbackRate);
         return spedingAmount * cashbackRate;
     }
 }

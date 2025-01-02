@@ -24,11 +24,21 @@ public class Commerciant {
      * @return an instance of the cashback strategy based on the commerciant's cashback strategy.
      */
     public CashbackStrategy getCashbackStrategyInstance() {
-        return switch (this.cashbackStrategy) {
-            case "nrOfTransactions" -> new NrOfTransactionsCashback();
-            case "spendingThreshold" -> new SpendingThresholdCashback();
-            default -> throw new IllegalArgumentException("Unknown cashback strategy: " + cashbackStrategy);
-        };
+        System.out.println("Cashback strategy in class Commerciant: " + this.cashbackStrategy);
+        switch (this.cashbackStrategy) {
+            case "nrOfTransactions" -> {
+                System.out.println("NrOfTransactionsCashback");
+                return new NrOfTransactionsCashback();
+            }
+            case "spendingThreshold" -> {
+                System.out.println("SpendingThresholdCashback");
+                return new SpendingThresholdCashback();
+            }
+            default -> {
+                System.out.println("Unknown cashback strategy: " + cashbackStrategy);
+                throw new IllegalArgumentException("Unknown cashback strategy: " + cashbackStrategy);
+            }
+        }
     }
 
     @Override
