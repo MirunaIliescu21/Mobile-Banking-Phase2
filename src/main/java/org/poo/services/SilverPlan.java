@@ -20,6 +20,7 @@ public class SilverPlan implements ServicePlan {
 //            return account.getRecentTransactions().stream()
 //                    .filter(t -> t.getAmount() >= 300)
 //                    .count() >= 5;
+
         return false;
     }
 }

@@ -1,5 +1,8 @@
 package org.poo.services;
 
+import lombok.Data;
+
+@Data
 public class Commerciant {
     private final String name;
     private final int id;
@@ -14,6 +17,18 @@ public class Commerciant {
         this.account = account;
         this.type = type;
         this.cashbackStrategy = cashbackStrategy;
+    }
+
+    /**
+     * Choose the cashback strategy
+     * @return an instance of the cashback strategy based on the commerciant's cashback strategy.
+     */
+    public CashbackStrategy getCashbackStrategyInstance() {
+        return switch (this.cashbackStrategy) {
+            case "nrOfTransactions" -> new NrOfTransactionsCashback();
+            case "spendingThreshold" -> new SpendingThresholdCashback();
+            default -> throw new IllegalArgumentException("Unknown cashback strategy: " + cashbackStrategy);
+        };
     }
 
     @Override

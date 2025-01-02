@@ -9,15 +9,15 @@ import org.poo.exceptions.InsufficientFundsException;
 import org.poo.exceptions.UnauthorizedCardAccessException;
 import org.poo.exceptions.UnauthorizedCardStatusException;
 import org.poo.exceptions.UserNotFoundException;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 import org.poo.models.Account;
 import org.poo.models.Card;
 import org.poo.models.Transaction;
 import org.poo.models.User;
 import org.poo.fileio.CommandInput;
-import org.poo.services.GoldPlan;
-import org.poo.services.ServicePlan;
-import org.poo.services.SilverPlan;
+import org.poo.services.*;
 import org.poo.utils.Utils;
 
 import java.util.ArrayList;
@@ -57,7 +57,7 @@ public final class CommandActions {
             for (Account account : user.getAccounts()) {
                 ObjectNode accountNode = context.getObjectMapper().createObjectNode();
                 accountNode.put("IBAN", account.getIban());
-                accountNode.put("balance", account.getBalance());
+                accountNode.put("balance", roundToTwoDecimals(account.getBalance()));
                 accountNode.put("currency", account.getCurrency());
                 accountNode.put("type", account.getType());
 
@@ -340,7 +340,118 @@ public final class CommandActions {
      * or errors, maintaining a complete audit trail of the process.
      * @param command Command input containing email, card number, amount, and currency.
      */
-    public void payOnline(final CommandInput command,
+//    public void payOnline(final CommandInput command,
+//                          final CommandContext context) throws UserNotFoundException,
+//                                                               CardNotFoundException,
+//                                                               UnauthorizedCardAccessException,
+//                                                               InsufficientFundsException,
+//                                                               UnauthorizedCardStatusException {
+//        String email = command.getEmail();
+//        String cardNumber = command.getCardNumber();
+//        int timestamp = command.getTimestamp();
+//
+//        User user = findUserByEmail(context.getUsers(), email);
+//        Card cardUser = null;
+//        Account accountUser = null;
+//
+//        try {
+//            // Check if the user exists
+//            if (user == null) {
+//                throw new UserNotFoundException("User not found");
+//            }
+//
+//            // Search for the card in each account of the user
+//            for (Account account : user.getAccounts()) {
+//                if (account.findCardByNumber(cardNumber) != null) {
+//                    cardUser = account.findCardByNumber(cardNumber);
+//                    accountUser = account;
+//                    break;
+//                }
+//            }
+//
+//            // If the card was not found, add an error to the output
+//            if (cardUser == null) {
+//                throw new CardNotFoundException("Card not found");
+//            }
+//
+//            // Check if the user owns the card
+//            if (!accountUser.getOwner().equals(email)) {
+//                throw new UnauthorizedCardAccessException("User does not own the card");
+//            }
+//            // Convert the amount to the account currency
+//            double amountInAccountCurrency;
+//            amountInAccountCurrency = context.getCurrencyConverter().
+//                    convertCurrency(command.getAmount(),
+//                    command.getCurrency(),
+//                    accountUser.getCurrency());
+//
+//            // Check if the card is active amd if the account has enough funds
+//            double newBalance = accountUser.getBalance() - amountInAccountCurrency;
+//            if (newBalance < accountUser.getMinimumBalance()) {
+//                if (cardUser.getStatus().equals("active")
+//                        && amountInAccountCurrency > accountUser.getBalance()) {
+//                    throw new InsufficientFundsException("Insufficient funds");
+//                }
+//            }
+//
+//            // Make the payment
+//            accountUser.setBalance(accountUser.getBalance() - amountInAccountCurrency);
+//            if (cardUser.getStatus().equals("active")
+//                    && accountUser.getBalance() >= accountUser.getMinimumBalance()) {
+//                cardUser.setStatus("active");
+//                Transaction transaction = new Transaction.TransactionBuilder(timestamp,
+//                        "Card payment", accountUser.getIban())
+//                        .amount(amountInAccountCurrency)
+//                        .commerciant(command.getCommerciant())
+//                        .build();
+//                user.addTransaction(transaction);
+//
+//                // If the card is the type of "one time pay",
+//                // it is destroyed after the payment and a new card is created
+//                if (cardUser.getType().equals("one time pay")) {
+//                    cardUser.setStatus("destroyed");
+//                    accountUser.getCards().remove(cardUser);
+//                    Transaction transaction1 = new Transaction.TransactionBuilder(timestamp,
+//                            "The card has been destroyed", accountUser.getIban())
+//                            .card(cardNumber)
+//                            .cardHolder(user.getEmail())
+//                            .build();
+//                    user.addTransaction(transaction1);
+//
+//                    String newCardNumber = Utils.generateCardNumber();
+//                    Card oneTimeCard = new Card(newCardNumber, "active", "one time pay");
+//                    accountUser.addCard(oneTimeCard);
+//
+//                    Transaction transaction2;
+//                    transaction2 = new Transaction.TransactionBuilder(command.getTimestamp(),
+//                            "New card created", accountUser.getIban())
+//                            .card(newCardNumber)
+//                            .cardHolder(user.getEmail())
+//                            .build();
+//                    user.addTransaction(transaction2);
+//                }
+//            } else {
+//                // The payment cannot be made, so the amount is returned to the account
+//                // and the card is frozen
+//                cardUser.setStatus("frozen");
+//                accountUser.setBalance(accountUser.getBalance() + amountInAccountCurrency);
+//                throw new UnauthorizedCardStatusException("The card is frozen");
+//            }
+//        } catch (UserNotFoundException | CardNotFoundException | UnauthorizedCardAccessException
+//                 | CurrencyConversionException e) {
+//            addError(context.getOutput(), e.getMessage(), timestamp, "payOnline");
+//        } catch (InsufficientFundsException | UnauthorizedCardStatusException e) {
+//            // Add a transaction to the account
+//            Transaction transaction = new Transaction.TransactionBuilder(timestamp,
+//                    e.getMessage(), accountUser.getIban()).build();
+//            user.addTransaction(transaction);
+//        } catch (IllegalArgumentException e) {
+//            // Add an error to the output if the currency conversion is not supported
+//            addError(context.getOutput(), "Currency conversion not supported",
+//                    timestamp, "payOnline");
+//        }
+//    }
+        public void payOnline(final CommandInput command,
                           final CommandContext context) throws UserNotFoundException,
                                                                CardNotFoundException,
                                                                UnauthorizedCardAccessException,
@@ -385,17 +496,32 @@ public final class CommandActions {
                     command.getCurrency(),
                     accountUser.getCurrency());
 
+            // Calculate commission
+            double commission = user.getCurrentPlan().calculateTransactionFee(amountInAccountCurrency);
+            System.out.println("commission: " + commission);
+            // Calculate cashback
+            Commerciant commerciant = context.findCommerciantByName(command.getCommerciant());
+            System.out.println("commerciant: " + commerciant.getName() + " " + commerciant.getType());
+            CashbackStrategy cashbackStrategy = commerciant.getCashbackStrategyInstance();
+            System.out.println("cashbackStrategy: " + cashbackStrategy.getClass().getSimpleName());
+            double cashback = cashbackStrategy.calculateCashback(user, commerciant, amountInAccountCurrency);
+            System.out.println("cashback: " + cashback);
+
+            // Apply commission and cashback
+            double finalAmount = amountInAccountCurrency + commission - cashback;
+            System.out.println("finalAmount: " + finalAmount);
+
             // Check if the card is active amd if the account has enough funds
-            double newBalance = accountUser.getBalance() - amountInAccountCurrency;
+            double newBalance = accountUser.getBalance() - finalAmount;
             if (newBalance < accountUser.getMinimumBalance()) {
                 if (cardUser.getStatus().equals("active")
-                        && amountInAccountCurrency > accountUser.getBalance()) {
+                        && finalAmount > accountUser.getBalance()) {
                     throw new InsufficientFundsException("Insufficient funds");
                 }
             }
 
             // Make the payment
-            accountUser.setBalance(accountUser.getBalance() - amountInAccountCurrency);
+            accountUser.setBalance(accountUser.getBalance() - finalAmount);
             if (cardUser.getStatus().equals("active")
                     && accountUser.getBalance() >= accountUser.getMinimumBalance()) {
                 cardUser.setStatus("active");
@@ -434,7 +560,7 @@ public final class CommandActions {
                 // The payment cannot be made, so the amount is returned to the account
                 // and the card is frozen
                 cardUser.setStatus("frozen");
-                accountUser.setBalance(accountUser.getBalance() + amountInAccountCurrency);
+                accountUser.setBalance(accountUser.getBalance() + finalAmount);
                 throw new UnauthorizedCardStatusException("The card is frozen");
             }
         } catch (UserNotFoundException | CardNotFoundException | UnauthorizedCardAccessException
@@ -451,7 +577,6 @@ public final class CommandActions {
                     timestamp, "payOnline");
         }
     }
-
 
     /**
      * Send money from one account to another.
@@ -527,8 +652,13 @@ public final class CommandActions {
             return;
         }
 
+        // Add commission
+        double commission = senderUser.getCurrentPlan().calculateTransactionFee(amount);
+        System.out.println("commission: " + commission);
+        double finalAmount = amount + commission;
+
         // Make the actual transaction
-        senderAccount.setBalance(senderAccount.getBalance() - amount);
+        senderAccount.setBalance(senderAccount.getBalance() - finalAmount);
         receiverAccount.setBalance(receiverAccount.getBalance() + convertedAmount);
         System.out.println("senderAccount balance: " + senderAccount.getBalance());
         System.out.println("receiverAccount balance: " + receiverAccount.getBalance());
@@ -1056,16 +1186,6 @@ public final class CommandActions {
             return;
         }
 
-//        // Conversia valutară
-//        double convertedAmount = context.getCurrencyConverter()
-//                .convertCurrency(amount, savingsAccount.getCurrency(), currency);
-//
-//        // Actualizarea balanțelor
-//        savingsAccount.setBalance(savingsAccount.getBalance() - amount);
-//        classicAccount.setBalance(classicAccount.getBalance() + convertedAmount);
-//
-//        context.addOutputMessage("Savings withdrawal", context);
-
         account.setBalance(account.getBalance() - amount);
         classicAccount.setBalance(classicAccount.getBalance() + convertedAmount);
 
@@ -1075,6 +1195,11 @@ public final class CommandActions {
         user.addTransaction(transaction);
     }
 
+    /**
+     * Upgrade the plan of a user. The user can upgrade from a standard or student plan to a silver and
+     * @param command the command to be executed
+     * @param context the context of the command
+     */
     public void upgradePlan(final CommandInput command, final CommandContext context) {
         String accountIBAN = command.getAccount();
         String newPlanType = command.getNewPlanType();
@@ -1095,6 +1220,7 @@ public final class CommandActions {
 
         System.out.println("accountIBAN: " + accountIBAN + "vrea sa treaca de la planul "
                 + user.getCurrentPlan().getPlanType() + " la planul " + newPlanType);
+
         // Check if the user already has the desired plan
         if (user.getCurrentPlan().getPlanType().equals(newPlanType)) {
             Transaction transaction = new Transaction.TransactionBuilder(command.getTimestamp(),
@@ -1119,16 +1245,34 @@ public final class CommandActions {
             return;
         }
 
+        int approvedTransactions = user.countCardPaymentTransaction(command.getAccount(), 300, context);
+        // If the current plan is silver and the user has at least 5 approved transactions
+        // of at least 300 RON, the upgrade is made automatically to gold
+        if (currentPlanIndex == 2 && approvedTransactions >= 5) {
+            user.setCurrentPlan(new GoldPlan());
+            System.out.println("Userul a trecut automat la Gold");
+            Transaction transaction = new Transaction.TransactionBuilder(command.getTimestamp(),
+                    "Upgrade plan", accountIBAN)
+                    .currentPlan(user.getCurrentPlan().getPlanType())
+                    .build();
+            user.addTransaction(transaction);
+            return;
+        }
+
         // Calculate the fee for the upgrade (in RON)
         double fee = 0;
-        if (currentPlanIndex == 0 && newPlanIndex == 2) fee = 100; // standard/student to silver
+        if (currentPlanIndex == 0 && newPlanIndex == 2) fee = 100; // standard to silver
+        if (currentPlanIndex == 1 && newPlanIndex == 2) fee = 100; // student to silver
         if (currentPlanIndex == 2 && newPlanIndex == 3) fee = 250; // silver to gold
-        if (currentPlanIndex == 0 && newPlanIndex == 3) fee = 350; // standard/student to gold
+        if (currentPlanIndex == 0 && newPlanIndex == 3) fee = 350; // standard to gold
+        if (currentPlanIndex == 1 && newPlanIndex == 3) fee = 350; // student to golf
 
         double convertedFee;
         try {
             convertedFee = context.getCurrencyConverter().convertCurrency(fee,
                     "RON", account.getCurrency());
+            // Round the converted fee to two decimals
+            convertedFee = roundToTwoDecimals(convertedFee);
         } catch (CurrencyConversionException e) {
             addError(context.getOutput(), e.getMessage(),
                     command.getTimestamp(), "upgradePlan");
@@ -1145,7 +1289,7 @@ public final class CommandActions {
         }
         // Debit the fee from the account
         account.setBalance(account.getBalance() - convertedFee);
-
+        System.out.println("account balance: " + account.getBalance());
         ServicePlan newPlan = switch (newPlanType) {
             case "silver" -> new SilverPlan();
             case "gold" -> new GoldPlan();
@@ -1158,6 +1302,102 @@ public final class CommandActions {
                 .currentPlan(user.getCurrentPlan().getPlanType())
                 .build();
         user.addTransaction(transaction);
+    }
+
+    /**
+     * Round a double value to two decimals.
+     * @param value the value to be rounded
+     * @return the rounded value
+     */
+    private double roundToTwoDecimals(double value) {
+        return BigDecimal.valueOf(value)
+                .setScale(2, RoundingMode.HALF_UP)
+                .doubleValue();
+    }
+
+    public void cashWithdrawal(final CommandInput command, final CommandContext context) throws UserNotFoundException,
+            CardNotFoundException,
+            UnauthorizedCardAccessException,
+            InsufficientFundsException,
+            UnauthorizedCardStatusException {
+
+        String email = command.getEmail();
+        String cardNumber = command.getCardNumber();
+        int timestamp = command.getTimestamp();
+        double amount = command.getAmount();
+
+        User user = findUserByEmail(context.getUsers(), email);
+        Card cardUser = null;
+        Account accountUser = null;
+
+        try {
+            // Check if the user exists
+            if (user == null) {
+                throw new UserNotFoundException("User not found");
+            }
+
+            // Search for the card in each account of the user
+            for (Account account : user.getAccounts()) {
+                if (account.findCardByNumber(cardNumber) != null) {
+                    cardUser = account.findCardByNumber(cardNumber);
+                    accountUser = account;
+                    break;
+                }
+            }
+
+            // If the card was not found, add an error to the output
+            if (cardUser == null) {
+                throw new CardNotFoundException("Card not found");
+            }
+
+            // Check if the user owns the card
+            if (!accountUser.getOwner().equals(email)) {
+                throw new UnauthorizedCardAccessException("User does not own the card");
+            }
+
+            // Calculate commission
+            double commission = user.getCurrentPlan().calculateTransactionFee(amount);
+            System.out.println("commission: " + commission);
+
+            // Apply commission and cashback
+            double finalAmount = amount + commission;
+            System.out.println("finalAmount: " + finalAmount);
+
+            // Check if the card is active amd if the account has enough funds
+            double newBalance = accountUser.getBalance() - finalAmount;
+            if (newBalance < accountUser.getMinimumBalance()) {
+                if (cardUser.getStatus().equals("active")
+                        && finalAmount > accountUser.getBalance()) {
+                    throw new InsufficientFundsException("Insufficient funds");
+                }
+            }
+
+            // Make the payment
+            accountUser.setBalance(accountUser.getBalance() - finalAmount);
+            if (cardUser.getStatus().equals("active")
+                    && accountUser.getBalance() >= accountUser.getMinimumBalance()) {
+                cardUser.setStatus("active");
+                Transaction transaction = new Transaction.TransactionBuilder(timestamp,
+                        "Cash withdrawal of " + amount, accountUser.getIban())
+                        .amount(amount)
+                        .error("Cash withdrawal")
+                        .build();
+                user.addTransaction(transaction);
+            } else {
+                // The payment cannot be made, so the amount is returned to the account
+                // and the card is frozen
+                cardUser.setStatus("frozen");
+                accountUser.setBalance(accountUser.getBalance() + finalAmount);
+                throw new UnauthorizedCardStatusException("The card is frozen");
+            }
+        } catch (UserNotFoundException | CardNotFoundException | UnauthorizedCardAccessException e) {
+            addError(context.getOutput(), e.getMessage(), timestamp, "cashWithdrawal");
+        } catch (InsufficientFundsException | UnauthorizedCardStatusException e) {
+            // Add a transaction to the account
+            Transaction transaction = new Transaction.TransactionBuilder(timestamp,
+                    e.getMessage(), accountUser.getIban()).build();
+            user.addTransaction(transaction);
+        }
     }
 
     /**

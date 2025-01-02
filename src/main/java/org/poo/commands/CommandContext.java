@@ -37,6 +37,15 @@ public class CommandContext {
         this.currencyConverter = currencyConverter;
     }
 
+    public Commerciant findCommerciantByName(String name) {
+        for (Commerciant commerciant : commerciants) {
+            if (commerciant.getName().equalsIgnoreCase(name)) {
+                return commerciant;
+            }
+        }
+        throw new IllegalArgumentException("Commerciant with name " + name + " not found");
+    }
+
     public void addOutputMessage(String message, CommandContext context) {
         ObjectNode outputNode = context.getObjectMapper().createObjectNode();
         outputNode.put("message", message);

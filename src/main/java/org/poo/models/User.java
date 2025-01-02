@@ -4,9 +4,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.Data;
-import org.poo.services.ServicePlan;
-import org.poo.services.StandardPlan;
-import org.poo.services.StudentPlan;
+import org.poo.commands.CommandContext;
+import org.poo.exceptions.CurrencyConversionException;
+import org.poo.services.*;
 
 import java.time.LocalDate;
 import java.time.Period;
@@ -180,6 +180,8 @@ public class User {
             return "splitPayment";
         } else if (transaction.getCurrentPlan() != null) {
             return "upgradePlan";
+        } else if (transaction.getAmount() != 0 && transaction.getError().equalsIgnoreCase("Cash withdrawal")) {
+            return "cashWithdrawal";
         }
         return "unknown";
     }
@@ -282,8 +284,68 @@ public class User {
         }
     }
 
-    public boolean isOfMinimumAge(int minimumAge) {
+    /**
+     * Check if the user is of minimum age.
+     * @param minimumAge the minimum age
+     * @return true if the user is of minimum age, false otherwise
+     */
+    public boolean isOfMinimumAge(final int minimumAge) {
         LocalDate birthDate = LocalDate.parse(this.getBirthDate());
         return Period.between(birthDate, LocalDate.now()).getYears() >= minimumAge;
+    }
+
+    /**
+     * Get the number of transactions for a specific user's account.
+     * @param accountIban the IBAN of the user's account
+     * @param minAmount the minimum amount of the transaction
+     * @return the number of transactions.
+     */
+    public int countCardPaymentTransaction(final String accountIban, final double minAmount, final CommandContext context) {
+        int count = 0;
+        for (Transaction transaction : transactions) {
+            if (!transaction.getAccount().equals(accountIban)) {
+                continue;
+            }
+
+            if (!transaction.getDescription().equals("Card payment")) {
+                continue;
+            }
+
+            double convertedAmount;
+            try {
+                convertedAmount = context.getCurrencyConverter().convertCurrency(minAmount,
+                        "RON", transaction.getAmountCurrency());
+            } catch (CurrencyConversionException e) {
+                return -1;
+            }
+
+            if (transaction.getAmount() >= convertedAmount) {
+                count++;
+            }
+        }
+        System.out.println("S-au efectuat " + count + " tranzactii de tip card payment cu suma minima de " + minAmount + " RON.");
+        return count;
+    }
+
+    public int getTransactionCountByCommerciant(final Commerciant commerciant) {
+        int count = 0;
+        for (Transaction transaction : transactions) {
+            if (transaction.getCommerciant().equals(commerciant.getName())) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    public double getTotalSpendingInCurrency(CurrencyConverter converter, String targetCurrency) throws CurrencyConversionException {
+        double totalSpending = 0.0;
+        for (Transaction transaction : transactions) {
+            if (transaction.getDescription().equals("Card payment") && transaction.getAmount() > 0) {
+                totalSpending += converter.convertCurrency(transaction.getAmount(),
+                        transaction.getAmountCurrency(),
+                        targetCurrency);
+            }
+        }
+        return totalSpending;
     }
 }

@@ -10,6 +10,7 @@ public class StudentPlan implements ServicePlan {
 
     @Override
     public double calculateTransactionFee(double amount) {
+        System.out.println("transaction fee for student: " + amount * 0.0);
         return 0; // No fee for student
     }
 

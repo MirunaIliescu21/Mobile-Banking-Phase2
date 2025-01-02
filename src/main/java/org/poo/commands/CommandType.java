@@ -24,6 +24,7 @@ public enum CommandType {
     CHANGE_INTEREST_RATE("changeInterestRate"),
     WITHDRAW_SAVINGS("withdrawSavings"),
     UPGRADE_PLAN("upgradePlan"),
+    CASH_WITHDRAWAL("cashWithdrawal"),
     DEFAULT("default");
 
     private final String commandName;

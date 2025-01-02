@@ -25,6 +25,7 @@ public final class Transaction {
     private final String cardHolder;
     private final String commerciant;
     private final String currentPlan;
+    private int commercialId;
     private String error;
     private List<String> involvedAccounts = null;
 
