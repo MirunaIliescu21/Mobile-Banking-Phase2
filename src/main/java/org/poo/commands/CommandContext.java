@@ -2,6 +2,7 @@ package org.poo.commands;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.Getter;
 import org.poo.models.User;
 import org.poo.services.Commerciant;
@@ -35,4 +36,11 @@ public class CommandContext {
         this.output = output;
         this.currencyConverter = currencyConverter;
     }
+
+    public void addOutputMessage(String message, CommandContext context) {
+        ObjectNode outputNode = context.getObjectMapper().createObjectNode();
+        outputNode.put("message", message);
+        context.getOutput().add(outputNode);
+    }
+
 }

@@ -15,6 +15,9 @@ import org.poo.models.Card;
 import org.poo.models.Transaction;
 import org.poo.models.User;
 import org.poo.fileio.CommandInput;
+import org.poo.services.GoldPlan;
+import org.poo.services.ServicePlan;
+import org.poo.services.SilverPlan;
 import org.poo.utils.Utils;
 
 import java.util.ArrayList;
@@ -502,7 +505,7 @@ public final class CommandActions {
                                  final double amount, final CommandInput command,
                                  final CommandContext context)
         throws InsufficientFundsException {
-
+        System.out.println(command.getCommand() + " " + command.getTimestamp());
         // Verify if the sender has enough funds
         if (senderAccount.getBalance() < amount) {
             throw new InsufficientFundsException("Insufficient funds.");
@@ -516,6 +519,8 @@ public final class CommandActions {
         try {
             convertedAmount = context.getCurrencyConverter().convertCurrency(amount,
                     senderCurrency, receiverCurrency);
+            System.out.println("amount: " + amount + " " + senderCurrency);
+            System.out.println("convertedAmount: " + convertedAmount + " " + receiverCurrency);
         } catch (CurrencyConversionException e) {
             addError(context.getOutput(), e.getMessage(),
                     command.getTimestamp(), "sendMoney");
@@ -525,6 +530,8 @@ public final class CommandActions {
         // Make the actual transaction
         senderAccount.setBalance(senderAccount.getBalance() - amount);
         receiverAccount.setBalance(receiverAccount.getBalance() + convertedAmount);
+        System.out.println("senderAccount balance: " + senderAccount.getBalance());
+        System.out.println("receiverAccount balance: " + receiverAccount.getBalance());
 
         // Add the transaction to the sender's account
         Transaction senderTransaction = new Transaction.TransactionBuilder(command.getTimestamp(),
@@ -979,6 +986,178 @@ public final class CommandActions {
             CommandActions.addError(context.getOutput(), e.getMessage(),
                     command.getTimestamp(), command.getCommand());
         }
+    }
+
+    public void withdrawSavings(final CommandInput command, final CommandContext context) {
+        String accountIBAN = command.getAccount();
+        double amount = command.getAmount();
+        String currency = command.getCurrency();
+
+        Account account = User.findAccountByIBAN(context.getUsers(), command.getAccount());
+        if (account == null) {
+            addError(context.getOutput(), "Account not found",
+                    command.getTimestamp(), command.getCommand());
+            return;
+        }
+
+        User user = User.findUserByAccount(context.getUsers(), account);
+        if (user == null) {
+            addError(context.getOutput(), "User not found",
+                    command.getTimestamp(), command.getCommand());
+            return;
+        }
+
+        if (!account.getType().equals("savings")) {
+            Transaction transaction = new Transaction.TransactionBuilder(command.getTimestamp(),
+                    "Account is not of type savings.", accountIBAN)
+                    .build();
+            user.addTransaction(transaction);
+            return;
+        }
+
+        // Check if the user is of minimum age
+        if (!user.isOfMinimumAge(21)) {
+            Transaction transaction = new Transaction.TransactionBuilder(command.getTimestamp(),
+                    "You don't have the minimum age required.", accountIBAN)
+                    .build();
+            user.addTransaction(transaction);
+            return;
+        }
+
+        // Check if the account has enough funds
+        if (account.getBalance() < amount) {
+            Transaction transaction = new Transaction.TransactionBuilder(command.getTimestamp(),
+                    "Insufficient funds", accountIBAN)
+                    .build();
+            user.addTransaction(transaction);
+            return;
+        }
+
+        // Search if the user has a classic account with the same currency
+        Account classicAccount = user.getAccounts().stream()
+                .filter(acc -> acc.getType().equals("classic") && acc.getCurrency().equals(currency))
+                .findFirst().orElse(null);
+
+        if (classicAccount == null) {
+            Transaction transaction = new Transaction.TransactionBuilder(command.getTimestamp(),
+                    "You do not have a classic account.", accountIBAN)
+                    .build();
+            user.addTransaction(transaction);
+            return;
+        }
+
+        double convertedAmount;
+        try {
+            convertedAmount = context.getCurrencyConverter().convertCurrency(amount,
+                    command.getCurrency(), classicAccount.getCurrency());
+        } catch (CurrencyConversionException e) {
+            addError(context.getOutput(), e.getMessage(),
+                    command.getTimestamp(), "withdrawSavings");
+            return;
+        }
+
+//        // Conversia valutară
+//        double convertedAmount = context.getCurrencyConverter()
+//                .convertCurrency(amount, savingsAccount.getCurrency(), currency);
+//
+//        // Actualizarea balanțelor
+//        savingsAccount.setBalance(savingsAccount.getBalance() - amount);
+//        classicAccount.setBalance(classicAccount.getBalance() + convertedAmount);
+//
+//        context.addOutputMessage("Savings withdrawal", context);
+
+        account.setBalance(account.getBalance() - amount);
+        classicAccount.setBalance(classicAccount.getBalance() + convertedAmount);
+
+        Transaction transaction = new Transaction.TransactionBuilder(command.getTimestamp(),
+                "Savings withdrawal", accountIBAN)
+                .build();
+        user.addTransaction(transaction);
+    }
+
+    public void upgradePlan(final CommandInput command, final CommandContext context) {
+        String accountIBAN = command.getAccount();
+        String newPlanType = command.getNewPlanType();
+
+        Account account = User.findAccountByIBAN(context.getUsers(), command.getAccount());
+        if (account == null) {
+            addError(context.getOutput(), "Account not found",
+                    command.getTimestamp(), command.getCommand());
+            return;
+        }
+
+        User user = User.findUserByAccount(context.getUsers(), account);
+        if (user == null) {
+            addError(context.getOutput(), "User not found",
+                    command.getTimestamp(), command.getCommand());
+            return;
+        }
+
+        System.out.println("accountIBAN: " + accountIBAN + "vrea sa treaca de la planul "
+                + user.getCurrentPlan().getPlanType() + " la planul " + newPlanType);
+        // Check if the user already has the desired plan
+        if (user.getCurrentPlan().getPlanType().equals(newPlanType)) {
+            Transaction transaction = new Transaction.TransactionBuilder(command.getTimestamp(),
+                    "The user already has the " + newPlanType + " plan.", accountIBAN)
+                    .currentPlan(user.getCurrentPlan().getPlanType())
+                    .build();
+            user.addTransaction(transaction);
+            return;
+        }
+
+        // Check if the user can upgrade to the desired plan
+        List<String> planHierarchy = List.of("standard", "student", "silver", "gold");
+        int currentPlanIndex = planHierarchy.indexOf(user.getCurrentPlan().getPlanType());
+        int newPlanIndex = planHierarchy.indexOf(newPlanType);
+
+        if (newPlanIndex < currentPlanIndex) {
+            Transaction transaction = new Transaction.TransactionBuilder(command.getTimestamp(),
+                    "You cannot downgrade your plan.", accountIBAN)
+                    .currentPlan(user.getCurrentPlan().getPlanType())
+                    .build();
+            user.addTransaction(transaction);
+            return;
+        }
+
+        // Calculate the fee for the upgrade (in RON)
+        double fee = 0;
+        if (currentPlanIndex == 0 && newPlanIndex == 2) fee = 100; // standard/student to silver
+        if (currentPlanIndex == 2 && newPlanIndex == 3) fee = 250; // silver to gold
+        if (currentPlanIndex == 0 && newPlanIndex == 3) fee = 350; // standard/student to gold
+
+        double convertedFee;
+        try {
+            convertedFee = context.getCurrencyConverter().convertCurrency(fee,
+                    "RON", account.getCurrency());
+        } catch (CurrencyConversionException e) {
+            addError(context.getOutput(), e.getMessage(),
+                    command.getTimestamp(), "upgradePlan");
+            return;
+        }
+        System.out.println("convertedFee: " + convertedFee);
+
+        if (account.getBalance() < convertedFee) {
+            Transaction transaction = new Transaction.TransactionBuilder(command.getTimestamp(),
+                    "Insufficient funds", accountIBAN)
+                    .build();
+            user.addTransaction(transaction);
+            return;
+        }
+        // Debit the fee from the account
+        account.setBalance(account.getBalance() - convertedFee);
+
+        ServicePlan newPlan = switch (newPlanType) {
+            case "silver" -> new SilverPlan();
+            case "gold" -> new GoldPlan();
+            default -> throw new IllegalArgumentException("Invalid plan type");
+        };
+        user.setCurrentPlan(newPlan);
+
+        Transaction transaction = new Transaction.TransactionBuilder(command.getTimestamp(),
+                "Upgrade plan", accountIBAN)
+                .currentPlan(user.getCurrentPlan().getPlanType())
+                .build();
+        user.addTransaction(transaction);
     }
 
     /**

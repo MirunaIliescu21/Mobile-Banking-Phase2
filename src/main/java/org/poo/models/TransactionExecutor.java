@@ -1,13 +1,7 @@
 package org.poo.models;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import org.poo.handlers.BankTransferHandler;
-import org.poo.handlers.CardDestroyedHandler;
-import org.poo.handlers.CardPaymentHandler;
-import org.poo.handlers.CreateCardHandler;
-import org.poo.handlers.DefaultTransactionHandler;
-import org.poo.handlers.SplitPaymentHandler;
-import org.poo.handlers.TransactionHandler;
+import org.poo.handlers.*;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -30,6 +24,7 @@ public abstract class TransactionExecutor {
         TRANSACTION_HANDLERS.put("destroyCard", new CardDestroyedHandler());
         TRANSACTION_HANDLERS.put("cardPayment", new CardPaymentHandler());
         TRANSACTION_HANDLERS.put("splitPayment", new SplitPaymentHandler());
+        TRANSACTION_HANDLERS.put("upgradePlan", new UpgradePlanHandler());
 
         // Use DefaultTransactionHandler for non-specific cases
         TransactionHandler defaultHandler = new DefaultTransactionHandler();

@@ -50,6 +50,8 @@ public class CommandExecutor {
             case SPENDINGS_REPORT -> actions.spendingsReport(command, context);
             case ADD_INTEREST -> actions.addInterest(command, context);
             case CHANGE_INTEREST_RATE -> actions.changeInterestRate(command, context);
+            case WITHDRAW_SAVINGS -> actions.withdrawSavings(command, context);
+            case UPGRADE_PLAN -> actions.upgradePlan(command, context);
             default -> actions.handleDefault(command, context);
         }
     }

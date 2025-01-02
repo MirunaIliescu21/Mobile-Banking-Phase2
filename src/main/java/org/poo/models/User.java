@@ -4,7 +4,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.Data;
+import org.poo.services.ServicePlan;
+import org.poo.services.StandardPlan;
+import org.poo.services.StudentPlan;
 
+import java.time.LocalDate;
+import java.time.Period;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -22,6 +27,7 @@ public class User {
     private List<Transaction> transactions;
     private final String birthDate;
     private final String occupation;
+    private ServicePlan currentPlan;
 
     public User(final String firstName, final String lastName, final String email
             , final String birthDate, final String occupation) {
@@ -32,6 +38,8 @@ public class User {
         transactions = new ArrayList<>();
         this.birthDate = birthDate;
         this.occupation = occupation;
+        // Set the default plan based on the occupation
+        currentPlan = occupation.equals("student") ? new StudentPlan() : new StandardPlan();
     }
 
     /**
@@ -170,6 +178,8 @@ public class User {
             return "cardPayment";
         } else if (transaction.getInvolvedAccounts() != null) {
             return "splitPayment";
+        } else if (transaction.getCurrentPlan() != null) {
+            return "upgradePlan";
         }
         return "unknown";
     }
@@ -270,5 +280,10 @@ public class User {
                         spendings.getOrDefault(commerciant, 0.0) + amount);
             }
         }
+    }
+
+    public boolean isOfMinimumAge(int minimumAge) {
+        LocalDate birthDate = LocalDate.parse(this.getBirthDate());
+        return Period.between(birthDate, LocalDate.now()).getYears() >= minimumAge;
     }
 }

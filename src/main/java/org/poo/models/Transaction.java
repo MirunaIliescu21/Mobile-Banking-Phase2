@@ -24,6 +24,7 @@ public final class Transaction {
     private final String card;
     private final String cardHolder;
     private final String commerciant;
+    private final String currentPlan;
     private String error;
     private List<String> involvedAccounts = null;
 
@@ -41,6 +42,7 @@ public final class Transaction {
         this.commerciant = builder.commerciant;
         this.involvedAccounts = builder.involvedAccounts;
         this.error = builder.error;
+        this.currentPlan = builder.currentPlan;
     }
 
     public static class TransactionBuilder {
@@ -55,6 +57,7 @@ public final class Transaction {
         private String card;
         private String cardHolder;
         private String commerciant;
+        private String currentPlan;
         private List<String> involvedAccounts;
         private String error;
 
@@ -163,6 +166,16 @@ public final class Transaction {
          */
         public TransactionBuilder error(final String errorMessage) {
             error = errorMessage;
+            return this;
+        }
+
+        /**
+         * Set the current plan for the transaction.
+         * @param plan The current plan
+         * @return The transaction builder
+         */
+        public TransactionBuilder currentPlan(final String plan) {
+            currentPlan = plan;
             return this;
         }
 
