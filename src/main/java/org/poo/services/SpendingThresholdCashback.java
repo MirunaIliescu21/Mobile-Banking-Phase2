@@ -11,7 +11,8 @@ public class SpendingThresholdCashback implements CashbackStrategy {
     @Override
     public double calculateCashback(User user, Commerciant commerciant, double spendingAmount) {
         System.out.println("calculateCashback for SpendingThresholdCashback");
-        double totalSpending = user.getTotalSpending();
+        double totalSpending = spendingAmount + user.getTotalSpending(commerciant);
+        // double totalSpending = user.getTotalSpending();
         System.out.println("Total spending: " + totalSpending);
         double cashbackRate = 0;
 

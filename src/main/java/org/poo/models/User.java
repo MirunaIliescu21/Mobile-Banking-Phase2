@@ -356,4 +356,21 @@ public class User {
     public void setCashbackReceived(String category) {
         receivedCashbacks.add(category);
     }
+
+    public double getTotalSpending(Commerciant commerciant) {
+
+        System.out.println("Incerc sa calculez total spending pentru comerciantul: " + commerciant.getName());
+        System.out.println("userul ale carui tranzactii le verific: " + this.getFirstName() + " " + this.getLastName() + " " + this.getEmail());
+        double totalSpending = 0;
+        for (Transaction transaction : this.getTransactions()) {
+            if (transaction.getCommerciant() == null) {
+                continue;
+            }
+
+            if (transaction.getCommerciant().equals(commerciant.getName())) {
+                totalSpending += transaction.getAmount();
+            }
+        }
+        return totalSpending;
+    }
 }
