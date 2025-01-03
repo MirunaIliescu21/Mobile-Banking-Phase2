@@ -12,18 +12,12 @@ import org.poo.exceptions.UserNotFoundException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
-import org.poo.models.Account;
-import org.poo.models.Card;
-import org.poo.models.Transaction;
-import org.poo.models.User;
+import org.poo.models.*;
 import org.poo.fileio.CommandInput;
 import org.poo.services.*;
 import org.poo.utils.Utils;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static org.poo.models.User.findUserByEmail;
 
@@ -732,115 +726,289 @@ public final class CommandActions {
         }
     }
 
-    /**
-     * Split a payment between multiple users.
-     * Add an error to the output if the account is not found
-     * or if the currency conversion is not supported.
-     * @param command   Command input containing email, card number, amount, and currency.
-     */
-    public void splitPayment(final CommandInput command,
-                                    final CommandContext context) {
-        List<String> accountsForSplit =  new ArrayList<>();
-        accountsForSplit = command.getAccounts();
+//    /**
+//     * Split a payment between multiple users.
+//     * Add an error to the output if the account is not found
+//     * or if the currency conversion is not supported.
+//     * @param command   Command input containing email, card number, amount, and currency.
+//     */
+//    public void splitPayment(final CommandInput command,
+//                                    final CommandContext context) {
+//        List<String> accountsForSplit =  new ArrayList<>();
+//        accountsForSplit = command.getAccounts();
+//
+//        double totalAmount = command.getAmount();
+//        String currency = command.getCurrency();
+//        int timestamp = command.getTimestamp();
+//
+//        // Calculate the amount per account
+//        double amountPerAccount = totalAmount / accountsForSplit.size();
+//
+//        // Check if the accounts exist and have enough funds
+//        List<Account> validAccounts = new ArrayList<>();
+//        List<Account> invalidAccounts = new ArrayList<>();
+//        String lastInvalidIban = null;
+//
+//        for (String iban : accountsForSplit) {
+//            Account account = User.findAccountByIBAN(context.getUsers(), iban);
+//
+//            if (account == null) {
+//                addError(context.getOutput(), "Account not found: " + iban,
+//                        timestamp, "splitPayment");
+//                return;
+//            }
+//
+//            try {
+//                // Convert the amount to the account currency
+//                double convertedAmount;
+//                convertedAmount = context.getCurrencyConverter().convertCurrency(amountPerAccount,
+//                                                                currency, account.getCurrency());
+//                // Check if the account has enough funds
+//                if (account.getBalance() - convertedAmount <= account.getMinimumBalance()) {
+//                    lastInvalidIban = account.getIban();
+//                    invalidAccounts.add(account);
+//                } else {
+//                    validAccounts.add(account);
+//                }
+//            } catch (CurrencyConversionException e) {
+//                addError(context.getOutput(),
+//                        "Currency conversion not supported for account: " + iban,
+//                        timestamp, "splitPayment");
+//                return;
+//            }
+//        }
+//
+//        if (!invalidAccounts.isEmpty()) {
+//            for (String involvedIban : accountsForSplit) {
+//                Account involvedAccount = User.findAccountByIBAN(context.getUsers(), involvedIban);
+//                if (involvedAccount != null) {
+//                    Transaction errorTransaction = new Transaction.TransactionBuilder(timestamp,
+//                            "Split payment of " + String.format("%.2f", totalAmount)
+//                                    + " " + currency,
+//                            involvedAccount.getIban())
+//                            .amount(amountPerAccount)
+//                            .amountCurrency(currency)
+//                            .involvedAccounts(accountsForSplit)
+//                            .error("Account " + lastInvalidIban
+//                                    + " has insufficient funds for a split payment.")
+//                            .build();
+//                    User involvedUser = User.findUserByAccount(context.getUsers(), involvedAccount);
+//                    if (involvedUser == null) {
+//                        return;
+//                    }
+//                    involvedUser.addTransaction(errorTransaction);
+//                }
+//            }
+//        }
+//
+//        if (validAccounts.size() != accountsForSplit.size()) {
+//            return;
+//        }
+//
+//        // Make the payment for each account if all accounts have enough funds
+//        for (Account account : validAccounts) {
+//            User user = User.findUserByAccount(context.getUsers(), account);
+//            if (user == null) {
+//                return;
+//            }
+//            double convertedAmount;
+//            try {
+//                convertedAmount = context.getCurrencyConverter().convertCurrency(amountPerAccount,
+//                        currency, account.getCurrency());
+//            } catch (CurrencyConversionException e) {
+//                addError(context.getOutput(),
+//                        "Currency conversion not supported for account: " + account.getIban(),
+//                        timestamp, "splitPayment");
+//                return;
+//            }
+//
+//            account.setBalance(account.getBalance() - convertedAmount);
+//            // Add a transaction to the user
+//            Transaction successTransaction = new Transaction.TransactionBuilder(timestamp,
+//                    "Split payment of " + String.format("%.2f", totalAmount) + " " + currency,
+//                    account.getIban())
+//                    .error(null)
+//                    .amount(amountPerAccount)
+//                    .amountCurrency(currency)
+//                    .involvedAccounts(accountsForSplit)
+//                    .build();
+//            user.addTransaction(successTransaction);
+//        }
+//    }
 
-        double totalAmount = command.getAmount();
-        String currency = command.getCurrency();
-        int timestamp = command.getTimestamp();
+//    public void splitPayment(final CommandInput command, final CommandContext context) {
+//        System.out.println("command: " + command.getCommand() + " " + command.getTimestamp());
+//        String splitPaymentType = command.getSplitPaymentType();
+//        List<String> accountsForSplit = command.getAccounts();
+//        List<Double> amountsForUsers = command.getAmountForUsers();
+//        String currency = command.getCurrency();
+//        double totalAmount = command.getAmount();
+//        int timestamp = command.getTimestamp();
+//
+//        // Check if the accounts and amounts are of the same size
+//        if (accountsForSplit.size() != amountsForUsers.size()) {
+//            addError(context.getOutput(), "Accounts and amounts size mismatch.", timestamp, "splitPayment");
+//            return;
+//        }
+//
+//        Map<String, Boolean> userResponses = new HashMap<>(); // Email -> Accept/Reject
+//        List<Account> validAccounts = new ArrayList<>();
+//        String lastInvalidIban = null;
+//
+//        // Check if the accounts are valid and have enough funds
+//        for (int i = 0; i < accountsForSplit.size(); i++) {
+//            String iban = accountsForSplit.get(i);
+//            double amountForUser = amountsForUsers.get(i);
+//
+//            Account account = User.findAccountByIBAN(context.getUsers(), iban);
+//            if (account == null) {
+//                addError(context.getOutput(), "One of the accounts is invalid.", timestamp, "splitPayment");
+//                return;
+//            }
+//
+//            try {
+//                // convert the amount to the account currency
+//                double convertedAmount = context.getCurrencyConverter().convertCurrency(amountForUser, currency, account.getCurrency());
+//                // check if the account has enough funds
+//                if (account.getBalance() - convertedAmount < account.getMinimumBalance()) {
+//                    lastInvalidIban = iban;
+//                    addError(context.getOutput(),
+//                            "Account " + lastInvalidIban + " has insufficient funds for a split payment.",
+//                            timestamp, "splitPayment");
+//                    return;
+//                }
+//            } catch (CurrencyConversionException e) {
+//                addError(context.getOutput(),
+//                        "Currency conversion not supported for account: " + iban,
+//                        timestamp, "splitPayment");
+//                return;
+//            }
+//
+//            validAccounts.add(account);
+//        }
+//
+//        // Initialize the pending split payment
+//        context.getPendingSplitPayments().put(timestamp, userResponses);
+//    }
+//
+//    // Procesare acceptare split payment
+//    public void acceptSplitPayment(final CommandInput command, final CommandContext context) {
+//        String email = command.getEmail();
+//        int timestamp = command.getTimestamp();
+//
+//        for (Map.Entry<Integer, Map<String, Boolean>> entry : context.getPendingSplitPayments().entrySet()) {
+//            Map<String, Boolean> responses = entry.getValue();
+//            if (!responses.containsKey(email)) {
+//                continue;
+//            }
+//
+//            responses.put(email, true);
+//
+//            // Dacă toți au acceptat
+//            if (responses.values().stream().allMatch(Boolean::booleanValue)) {
+//                processSplitPayment(command, context);
+//                context.getPendingSplitPayments().remove(entry.getKey());
+//            }
+//            return;
+//        }
+//    }
+//
+//    // Procesare refuz split payment
+//    public void rejectSplitPayment(final CommandInput command, final CommandContext context) {
+//        String email = command.getEmail();
+//        int timestamp = command.getTimestamp();
+//
+//        for (Map.Entry<Integer, Map<String, Boolean>> entry : context.getPendingSplitPayments().entrySet()) {
+//            Map<String, Boolean> responses = entry.getValue();
+//            if (!responses.containsKey(email)) {
+//                continue;
+//            }
+//
+//            addError(context.getOutput(), "One user rejected the payment.", timestamp, "rejectSplitPayment");
+//            context.getPendingSplitPayments().remove(entry.getKey());
+//            return;
+//        }
+//    }
+    public void splitPayment(final CommandInput command, final CommandContext context) {
+        PaymentProcessor paymentProcessor = PaymentProcessor.getInstance();
+        Map<String, String> emailToAccount = new HashMap<>();
+        Map<String, Double> accountBalances = new HashMap<>();
 
-        // Calculate the amount per account
-        double amountPerAccount = totalAmount / accountsForSplit.size();
-
-        // Check if the accounts exist and have enough funds
-        List<Account> validAccounts = new ArrayList<>();
-        List<Account> invalidAccounts = new ArrayList<>();
-        String lastInvalidIban = null;
-
-        for (String iban : accountsForSplit) {
+        for (String iban : command.getAccounts()) {
             Account account = User.findAccountByIBAN(context.getUsers(), iban);
-
             if (account == null) {
                 addError(context.getOutput(), "Account not found: " + iban,
-                        timestamp, "splitPayment");
+                         command.getTimestamp(), "splitPayment");
+                return;
+            }
+            emailToAccount.put(account.getOwner(), account.getIban());
+            accountBalances.put(account.getIban(), account.getBalance());
+        }
+
+        SplitPayment splitPayment = new SplitPayment(command.getSplitPaymentType(),
+                command.getAccounts(), command.getAmountForUsers(),
+                command.getCurrency(), command.getAmount(),
+                command.getTimestamp(), emailToAccount, accountBalances);
+        paymentProcessor.addSplitPayment(splitPayment);
+        paymentProcessor.printActiveCommands();
+    }
+
+    public void acceptSplitPayment(final CommandInput command, final CommandContext context) {
+        PaymentProcessor paymentProcessor = PaymentProcessor.getInstance();
+        paymentProcessor.processResponse(command.getEmail(), true, context);
+    }
+
+    public void rejectSplitPayment(final CommandInput command, final CommandContext context) {
+        PaymentProcessor paymentProcessor = PaymentProcessor.getInstance();
+        paymentProcessor.processResponse(command.getEmail(), false, context);
+    }
+
+    private void processSplitPayment(CommandInput splitPaymentCommand, CommandContext context) {
+        int timestamp = splitPaymentCommand.getTimestamp();
+        List<String> accountsForSplit = splitPaymentCommand.getAccounts();
+        List<Double> amountsForUsers = splitPaymentCommand.getAmountForUsers();
+        String currency = splitPaymentCommand.getCurrency();
+        double totalAmount = splitPaymentCommand.getAmount();
+
+        for (int i = 0; i < accountsForSplit.size(); i++) {
+            String iban = accountsForSplit.get(i);
+            double amountForUser = amountsForUsers.get(i);
+
+            Account account = User.findAccountByIBAN(context.getUsers(), iban);
+            if (account == null) {
+                addError(context.getOutput(), "Account not found: " + iban, timestamp, "processSplitPayment");
                 return;
             }
 
             try {
-                // Convert the amount to the account currency
-                double convertedAmount;
-                convertedAmount = context.getCurrencyConverter().convertCurrency(amountPerAccount,
-                                                                currency, account.getCurrency());
-                // Check if the account has enough funds
-                if (account.getBalance() - convertedAmount <= account.getMinimumBalance()) {
-                    lastInvalidIban = account.getIban();
-                    invalidAccounts.add(account);
-                } else {
-                    validAccounts.add(account);
+                // Convertire valutară
+                double convertedAmount = context.getCurrencyConverter().convertCurrency(amountForUser, currency, account.getCurrency());
+
+                // Debitarea contului
+                account.setBalance(account.getBalance() - convertedAmount);
+
+                // Înregistrare tranzacție de succes
+                Transaction successTransaction = new Transaction.TransactionBuilder(timestamp,
+                        "Split payment of " + String.format("%.2f", totalAmount) + " " + currency,
+                        account.getIban())
+                        .error(null)
+                        .amount(amountForUser)
+                        .amountCurrency(currency)
+                        .involvedAccounts(accountsForSplit)
+                        .build();
+
+                User user = User.findUserByAccount(context.getUsers(), account);
+                if (user != null) {
+                    user.addTransaction(successTransaction);
                 }
+
             } catch (CurrencyConversionException e) {
-                addError(context.getOutput(),
-                        "Currency conversion not supported for account: " + iban,
-                        timestamp, "splitPayment");
+                addError(context.getOutput(), "Currency conversion failed for account: " + iban, timestamp, "processSplitPayment");
                 return;
             }
-        }
-
-        if (!invalidAccounts.isEmpty()) {
-            for (String involvedIban : accountsForSplit) {
-                Account involvedAccount = User.findAccountByIBAN(context.getUsers(), involvedIban);
-                if (involvedAccount != null) {
-                    Transaction errorTransaction = new Transaction.TransactionBuilder(timestamp,
-                            "Split payment of " + String.format("%.2f", totalAmount)
-                                    + " " + currency,
-                            involvedAccount.getIban())
-                            .amount(amountPerAccount)
-                            .amountCurrency(currency)
-                            .involvedAccounts(accountsForSplit)
-                            .error("Account " + lastInvalidIban
-                                    + " has insufficient funds for a split payment.")
-                            .build();
-                    User involvedUser = User.findUserByAccount(context.getUsers(), involvedAccount);
-                    if (involvedUser == null) {
-                        return;
-                    }
-                    involvedUser.addTransaction(errorTransaction);
-                }
-            }
-        }
-
-        if (validAccounts.size() != accountsForSplit.size()) {
-            return;
-        }
-
-        // Make the payment for each account if all accounts have enough funds
-        for (Account account : validAccounts) {
-            User user = User.findUserByAccount(context.getUsers(), account);
-            if (user == null) {
-                return;
-            }
-            double convertedAmount;
-            try {
-                convertedAmount = context.getCurrencyConverter().convertCurrency(amountPerAccount,
-                        currency, account.getCurrency());
-            } catch (CurrencyConversionException e) {
-                addError(context.getOutput(),
-                        "Currency conversion not supported for account: " + account.getIban(),
-                        timestamp, "splitPayment");
-                return;
-            }
-
-            account.setBalance(account.getBalance() - convertedAmount);
-            // Add a transaction to the user
-            Transaction successTransaction = new Transaction.TransactionBuilder(timestamp,
-                    "Split payment of " + String.format("%.2f", totalAmount) + " " + currency,
-                    account.getIban())
-                    .error(null)
-                    .amount(amountPerAccount)
-                    .amountCurrency(currency)
-                    .involvedAccounts(accountsForSplit)
-                    .build();
-            user.addTransaction(successTransaction);
         }
     }
+
 
     /**
      * Generate a report with the transactions of a specific account.

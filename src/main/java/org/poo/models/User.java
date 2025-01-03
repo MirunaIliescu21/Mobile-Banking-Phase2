@@ -132,6 +132,7 @@ public class User {
      * @param transaction the specific transaction to be added
      */
     public void addTransaction(final Transaction transaction) {
+        System.out.println("Adding transaction: " + transaction.getDescription());
         transactions.add(transaction);
     }
 
@@ -141,6 +142,8 @@ public class User {
      * @param output the output array
      */
     public void printTransactions(final ArrayNode transactionsArray, final ArrayNode output) {
+        // Sorting the transactions by timestamp
+        transactions.sort(Comparator.comparingInt(Transaction::getTimestamp));
         for (Transaction transaction : transactions) {
             // Searching for the current transaction
             String transactionType = determineTransactionType(transaction);
@@ -201,6 +204,9 @@ public class User {
                                         final int startTimestamp,
                                         final int endTimestamp,
                                         final String accountIban) {
+        // Sorting the transactions by timestamp
+        transactions.sort(Comparator.comparingInt(Transaction::getTimestamp));
+
         int prevTimestamp = 0;
         for (Transaction transaction : transactions) {
             // Checking if the transaction is for the user's account
@@ -255,6 +261,9 @@ public class User {
                                                     final int endTimestamp,
                                                     final ObjectMapper objectMapper,
                                                     final String accountIban) {
+        // Sorting the transactions by timestamp
+        transactions.sort(Comparator.comparingInt(Transaction::getTimestamp));
+
         for (Transaction transaction : transactions) {
             // Check if the transaction is within the specified time interval
             if (transaction.getTimestamp() < startTimestamp) {

@@ -23,7 +23,7 @@ public class SplitPaymentHandler implements TransactionHandler {
             transactionJson.put("error", transaction.getError());
         }
         transactionJson.put("currency", transaction.getAmountCurrency());
-        transactionJson.put("amount", transaction.getAmount());
+        transactionJson.put("splitPaymentType", transaction.getSplitPaymentType());
 
         ObjectMapper mapper = new ObjectMapper();
         ArrayNode involvedAccountsJson = mapper.createArrayNode();
@@ -31,5 +31,17 @@ public class SplitPaymentHandler implements TransactionHandler {
             involvedAccountsJson.add(iban);
         }
         transactionJson.set("involvedAccounts", involvedAccountsJson);
+
+        if (transaction.getSplitPaymentType().equals("equal")) {
+            transactionJson.put("amount", transaction.getAmount());
+            return;
+        }
+
+        ObjectMapper mapper1 = new ObjectMapper();
+        ArrayNode amountsJson = mapper1.createArrayNode();
+        for (Double amount : transaction.getAmounts()) {
+            amountsJson.add(amount);
+        }
+        transactionJson.set("amountForUsers", amountsJson);
     }
 }

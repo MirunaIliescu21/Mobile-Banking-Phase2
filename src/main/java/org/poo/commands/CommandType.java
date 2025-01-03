@@ -25,6 +25,8 @@ public enum CommandType {
     WITHDRAW_SAVINGS("withdrawSavings"),
     UPGRADE_PLAN("upgradePlan"),
     CASH_WITHDRAWAL("cashWithdrawal"),
+    ACCEPT_SPLIT_PAYMENT("acceptSplitPayment"),
+    REJECT_SPLIT_PAYMENT("rejectSplitPayment"),
     DEFAULT("default");
 
     private final String commandName;

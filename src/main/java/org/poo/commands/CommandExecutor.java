@@ -53,6 +53,8 @@ public class CommandExecutor {
             case WITHDRAW_SAVINGS -> actions.withdrawSavings(command, context);
             case UPGRADE_PLAN -> actions.upgradePlan(command, context);
             case CASH_WITHDRAWAL -> actions.cashWithdrawal(command, context);
+            case ACCEPT_SPLIT_PAYMENT -> actions.acceptSplitPayment(command, context);
+            case REJECT_SPLIT_PAYMENT -> actions.rejectSplitPayment(command, context);
             default -> actions.handleDefault(command, context);
         }
     }

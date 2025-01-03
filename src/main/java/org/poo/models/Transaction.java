@@ -28,6 +28,8 @@ public final class Transaction {
     private int commercialId;
     private String error;
     private List<String> involvedAccounts = null;
+    private List<Double> amounts = null;
+    private String splitPaymentType;
 
     private Transaction(final TransactionBuilder builder) {
         this.timestamp = builder.timestamp;
@@ -44,6 +46,8 @@ public final class Transaction {
         this.involvedAccounts = builder.involvedAccounts;
         this.error = builder.error;
         this.currentPlan = builder.currentPlan;
+        this.amounts = builder.amounts;
+        this.splitPaymentType = builder.splitPaymentType;
     }
 
     public static class TransactionBuilder {
@@ -61,6 +65,8 @@ public final class Transaction {
         private String currentPlan;
         private List<String> involvedAccounts;
         private String error;
+        private List<Double> amounts;
+        private String splitPaymentType;
 
         public TransactionBuilder(final int timestamp,
                                   final String description,
@@ -161,6 +167,16 @@ public final class Transaction {
         }
 
         /**
+         * Set the amounts for the transaction.
+         * @param amountForUsers The list of amounts
+         * @return The transaction builder
+         */
+        public TransactionBuilder amounts(final List<Double> amountForUsers) {
+            amounts = amountForUsers;
+            return this;
+        }
+
+        /**
          * Set the error for the transaction.
          * @param errorMessage The error message
          * @return The transaction builder
@@ -177,6 +193,15 @@ public final class Transaction {
          */
         public TransactionBuilder currentPlan(final String plan) {
             currentPlan = plan;
+            return this;
+        }
+
+        /**
+         * Set the split payment type for the transaction.
+         * @param type The split payment type
+         */
+        public TransactionBuilder splitPaymentType(final String type) {
+            splitPaymentType = type;
             return this;
         }
 
