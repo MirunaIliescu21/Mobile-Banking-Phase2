@@ -1,5 +1,6 @@
 package org.poo.services;
 
+import org.poo.commands.CommandContext;
 import org.poo.exceptions.CurrencyConversionException;
 import org.poo.models.Transaction;
 import org.poo.models.User;
@@ -9,11 +10,21 @@ import org.poo.models.User;
  */
 public class SpendingThresholdCashback implements CashbackStrategy {
     @Override
-    public double calculateCashback(User user, Commerciant commerciant, double spendingAmount) {
+    public double calculateCashback(User user, Commerciant commerciant, String accountCurrency,
+                                    double spendingAmount, CommandContext context) throws CurrencyConversionException {
         System.out.println("calculateCashback for SpendingThresholdCashback");
-        double totalSpending = spendingAmount + user.getTotalSpending(commerciant);
+        double amountInRON = 0;
+        try {
+            amountInRON = context.getCurrencyConverter().convertCurrency(spendingAmount, accountCurrency, "RON");
+        } catch (CurrencyConversionException e) {
+            System.out.println("Currency conversion failed: " + e.getMessage());
+            return 0;
+        }
+
+        double totalSpending = amountInRON + user.getTotalSpending(commerciant, context);
         // double totalSpending = user.getTotalSpending();
-        System.out.println("Total spending: " + totalSpending);
+        System.out.println("Total spending: " + totalSpending + " RON");
+
         double cashbackRate = 0;
 
         if (totalSpending >= 500) {

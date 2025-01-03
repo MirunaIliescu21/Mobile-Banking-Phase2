@@ -332,9 +332,9 @@ public class User {
 
     public int getTransactionCountByCommerciant(final Commerciant commerciant, final List<Transaction> transactions) {
         System.out.println("Calculating transaction count for commerciant: " + commerciant.getName());
-        int count = 0;
+        int count = 1;
         for (Transaction transaction : transactions) {
-            System.out.println("Transaction commerciant: " + transaction.getCommerciant());
+            System.out.println("Transaction " + transaction.getTimestamp() + " commerciant: " + transaction.getCommerciant());
             if (transaction.getCommerciant() == null) {
                 continue;
             }
@@ -357,7 +357,7 @@ public class User {
         receivedCashbacks.add(category);
     }
 
-    public double getTotalSpending(Commerciant commerciant) {
+    public double getTotalSpending(Commerciant commerciant, CommandContext context) {
 
         System.out.println("Incerc sa calculez total spending pentru comerciantul: " + commerciant.getName());
         System.out.println("userul ale carui tranzactii le verific: " + this.getFirstName() + " " + this.getLastName() + " " + this.getEmail());
@@ -368,7 +368,14 @@ public class User {
             }
 
             if (transaction.getCommerciant().equals(commerciant.getName())) {
-                totalSpending += transaction.getAmount();
+                System.out.println("Transaction amount: " + transaction.getAmount() + " " + transaction.getAmountCurrency());
+                try {
+                    totalSpending += context.getCurrencyConverter().convertCurrency(transaction.getAmount(),
+                            transaction.getAmountCurrency(), "RON");
+                } catch (CurrencyConversionException e) {
+                    System.out.println("Currency conversion failed: " + e.getMessage());
+                    return 0;
+                }
             }
         }
         return totalSpending;

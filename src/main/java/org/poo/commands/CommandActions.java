@@ -391,6 +391,7 @@ public final class CommandActions {
                     convertCurrency(command.getAmount(),
                     command.getCurrency(),
                     accountUser.getCurrency());
+            System.out.println("amountInAccountCurrency: " + amountInAccountCurrency + " " + accountUser.getCurrency());
 
             double amountInRON;
             amountInRON = context.getCurrencyConverter().
@@ -413,19 +414,20 @@ public final class CommandActions {
             System.out.println("commerciant: " + commerciant.getName() + " " + commerciant.getType());
 
             CashbackStrategy cashbackStrategy = commerciant.getCashbackStrategyInstance();
-
-            double cashback = cashbackStrategy.calculateCashback(user, commerciant, amountInAccountCurrency);
+            String accountCurrency = accountUser.getCurrency();
+            double cashback = cashbackStrategy.calculateCashback(user, commerciant, accountCurrency, amountInAccountCurrency, context);
             System.out.println("cashback: " + cashback);
 
             // Apply commission and cashback
             double finalAmount = amountInAccountCurrency + commission - cashback;
-            System.out.println("finalAmount: " + finalAmount);
+            System.out.println("finalAmount: " + finalAmount + " " + accountUser.getCurrency());
 
             // Check if the card is active amd if the account has enough funds
             double newBalance = accountUser.getBalance() - finalAmount;
             if (newBalance < accountUser.getMinimumBalance()) {
                 if (cardUser.getStatus().equals("active")
                         && finalAmount > accountUser.getBalance()) {
+                    System.out.println("Insufficient funds at timestamp " + command.getTimestamp());
                     throw new InsufficientFundsException("Insufficient funds");
                 }
             }
@@ -1134,6 +1136,7 @@ public final class CommandActions {
      * @param context the context of the command
      */
     public void upgradePlan(final CommandInput command, final CommandContext context) {
+        System.out.println(command.getCommand() + " " + command.getTimestamp());
         String accountIBAN = command.getAccount();
         String newPlanType = command.getNewPlanType();
 
@@ -1239,6 +1242,7 @@ public final class CommandActions {
                 .currentPlan(user.getCurrentPlan().getPlanType())
                 .build();
         user.addTransaction(transaction);
+        System.out.println("Balance after upgrade is: " + account.getBalance());
     }
 
     /**
@@ -1257,7 +1261,7 @@ public final class CommandActions {
             UnauthorizedCardAccessException,
             InsufficientFundsException,
             UnauthorizedCardStatusException {
-
+        System.out.println(command.getCommand() + " " + command.getTimestamp());
         String email = command.getEmail();
         String cardNumber = command.getCardNumber();
         int timestamp = command.getTimestamp();
@@ -1306,11 +1310,16 @@ public final class CommandActions {
                     "RON",
                     accountUser.getCurrency());
 
+            System.out.println("finalAmountInAccountCurrency: " + amountInAccountCurrency + " " + accountUser.getCurrency());
+
             // Check if the card is active amd if the account has enough funds
             double newBalance = accountUser.getBalance() - amountInAccountCurrency;
-            if (newBalance < accountUser.getMinimumBalance()) {
+            System.out.println("newBalance: " + newBalance + " " + accountUser.getCurrency());
+            System.out.println("minimumBalance: " + accountUser.getMinimumBalance() + " " + accountUser.getCurrency());
+            if (newBalance < 0 || newBalance < accountUser.getMinimumBalance()) {
                 if (cardUser.getStatus().equals("active")
-                        && finalAmount > accountUser.getBalance()) {
+                        && amountInAccountCurrency > accountUser.getBalance()) {
+                    System.out.println("Insufficient funds pentru extragerea de numarar");
                     throw new InsufficientFundsException("Insufficient funds");
                 }
             }
@@ -1320,7 +1329,7 @@ public final class CommandActions {
             if (cardUser.getStatus().equals("active")
                     && accountUser.getBalance() >= accountUser.getMinimumBalance()) {
                 cardUser.setStatus("active");
-                System.out.println("S-A extras bani CU SUCCES account balance " + accountUser.getIban() + " plata online: " + accountUser.getBalance() + " " + accountUser.getCurrency());
+                System.out.println("S-au extras bani CU SUCCES account balance " + accountUser.getIban() + " plata online: " + accountUser.getBalance() + " " + accountUser.getCurrency());
                 Transaction transaction = new Transaction.TransactionBuilder(timestamp,
                         "Cash withdrawal of " + amount, accountUser.getIban())
                         .amount(amount)

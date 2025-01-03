@@ -1,5 +1,7 @@
 package org.poo.services;
 
+import org.poo.commands.CommandContext;
+import org.poo.exceptions.CurrencyConversionException;
 import org.poo.models.Transaction;
 import org.poo.models.User;
 
@@ -8,7 +10,8 @@ import org.poo.models.User;
  */
 public class NrOfTransactionsCashback implements CashbackStrategy {
     @Override
-    public double calculateCashback(User user, Commerciant commerciant, double spendingAmount) {
+    public double calculateCashback(User user, Commerciant commerciant, String accountCurrency, double spendingAmount, CommandContext context) {
+
         int transactionCount = user.getTransactionCountByCommerciant(commerciant, user.getTransactions());
         System.out.println("Transaction count for " + commerciant.getName() + ": " + transactionCount);
 
