@@ -548,11 +548,16 @@ public final class CommandActions {
         // Verify if the sender and receiver have the same currency
         String senderCurrency = senderAccount.getCurrency();
         String receiverCurrency = receiverAccount.getCurrency();
+        System.out.println("Before transaction");
+        System.out.println("senderAccount balance: " + senderAccount.getBalance() + " " + senderCurrency);
+        System.out.println("receiverAccount balance: " + receiverAccount.getBalance() + " " + receiverCurrency);
 
         double convertedAmount;
+        double amountInRON;
         try {
             convertedAmount = context.getCurrencyConverter().convertCurrency(amount,
                     senderCurrency, receiverCurrency);
+            amountInRON = context.getCurrencyConverter().convertCurrency(amount, senderCurrency, "RON");
             System.out.println("amount: " + amount + " " + senderCurrency);
             System.out.println("convertedAmount: " + convertedAmount + " " + receiverCurrency);
         } catch (CurrencyConversionException e) {
@@ -562,15 +567,24 @@ public final class CommandActions {
         }
 
         // Add commission
-        double commission = senderUser.getCurrentPlan().calculateTransactionFee(amount);
+        double commissionInRON = senderUser.getCurrentPlan().calculateTransactionFee(amountInRON);
+        double commission;
+        try {
+            commission = context.getCurrencyConverter().convertCurrency(commissionInRON,
+                    "RON", senderCurrency);
+        } catch (CurrencyConversionException e) {
+            addError(context.getOutput(), e.getMessage(),
+                    command.getTimestamp(), "sendMoney");
+            return;
+        }
         System.out.println("commission: " + commission);
         double finalAmount = amount + commission;
 
         // Make the actual transaction
         senderAccount.setBalance(senderAccount.getBalance() - finalAmount);
         receiverAccount.setBalance(receiverAccount.getBalance() + convertedAmount);
-        System.out.println("senderAccount balance: " + senderAccount.getBalance());
-        System.out.println("receiverAccount balance: " + receiverAccount.getBalance());
+        System.out.println("senderAccount balance: " + senderAccount.getBalance() + " " + senderCurrency);
+        System.out.println("receiverAccount balance: " + receiverAccount.getBalance() + " " + receiverCurrency);
 
         // Add the transaction to the sender's account
         Transaction senderTransaction = new Transaction.TransactionBuilder(command.getTimestamp(),
@@ -1418,7 +1432,7 @@ public final class CommandActions {
      * @param value the value to be rounded
      * @return the rounded value
      */
-    private double roundToTwoDecimals(double value) {
+    public static double roundToTwoDecimals(double value) {
         return BigDecimal.valueOf(value)
                 .setScale(2, RoundingMode.HALF_UP)
                 .doubleValue();

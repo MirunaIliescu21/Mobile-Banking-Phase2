@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.Data;
+import org.poo.commands.CommandActions;
 import org.poo.commands.CommandContext;
 import org.poo.exceptions.CurrencyConversionException;
 import org.poo.fileio.CommandInput;
@@ -157,13 +158,20 @@ public class SplitPayment {
         List<Account> invalidAccounts = new ArrayList<>();
         String lastInvalidIban = null;
 
+        System.out.println("splitPaymentType: " + splitPaymentType);
+        System.out.println("accounts: " + accounts.size());
         for (int i = 0; i < accounts.size(); i++) {
             String iban = accounts.get(i);
+            System.out.println("iban: " + iban);
+             double amountForUser;
             if (splitPaymentType.equals("equal")) {
-                amountsForUsers.set(i, amount / accounts.size());
+                System.out.println("total amount: " + amount + " " + currency);
+                // amountsForUsers.set(i, amount / accounts.size());
+                amountForUser = amount / accounts.size();
+            } else {
+                amountForUser = amountsForUsers.get(i);
             }
-            double amountForUser = amountsForUsers.get(i);
-
+            System.out.println("Account: " + iban + " Amount: " + amountForUser);
             Account account = User.findAccountByIBAN(context.getUsers(), iban);
             if (account == null) {
                 addError(context.getOutput(), "Account not found: " + iban, timestamp, "processSplitPayment");
@@ -177,6 +185,7 @@ public class SplitPayment {
                                                                 currency, account.getCurrency());
                 // Check if the account has enough funds
                 if (account.getBalance() - convertedAmount <= account.getMinimumBalance()) {
+                    System.out.println("Account " + account.getIban() + " has insufficient funds for a split payment.");
                     lastInvalidIban = account.getIban();
                     invalidAccounts.add(account);
                 } else {
@@ -190,12 +199,20 @@ public class SplitPayment {
             }
         }
 
+        System.out.println("S-a ajuns la invalidAccounts: " + invalidAccounts.size());
         if (!invalidAccounts.isEmpty()) {
             for (int i = 0; i < accounts.size(); i++) {
                 String iban = accounts.get(i);
                 Account involvedAccount = User.findAccountByIBAN(context.getUsers(), iban);
                 if (involvedAccount != null) {
-                    double amountForUser = amountsForUsers.get(i);
+                    double amountForUser;
+                    if (splitPaymentType.equals("equal")) {
+                        System.out.println("total amount: " + amount + " " + currency);
+                        // amountsForUsers.set(i, amount / accounts.size());
+                        amountForUser = amount / accounts.size();
+                    } else {
+                        amountForUser = amountsForUsers.get(i);
+                    }
                     // Add a transaction to the user
                     Transaction errorTransaction = new Transaction.TransactionBuilder(timestamp,
                             "Split payment of " + String.format("%.2f", amount) + " " + currency,
@@ -203,7 +220,7 @@ public class SplitPayment {
                             .error("Account " + lastInvalidIban
                                     + " has insufficient funds for a split payment.")
                             .splitPaymentType(splitPaymentType)
-                            .amount(amountForUser)
+                            .amount(CommandActions.roundToTwoDecimals(amountForUser))
                             .amounts(amountsForUsers)
                             .amountCurrency(currency)
                             .involvedAccounts(accounts)
@@ -249,7 +266,7 @@ public class SplitPayment {
                     account.getIban())
                     .error(null)
                     .splitPaymentType(splitPaymentType)
-                    .amount(amountForUser)
+                    .amount(CommandActions.roundToTwoDecimals(amountForUser))
                     .amounts(amountsForUsers)
                     .amountCurrency(currency)
                     .involvedAccounts(accounts)

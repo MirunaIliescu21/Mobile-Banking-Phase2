@@ -28,8 +28,7 @@ public class PaymentProcessor {
     }
 
     public void processResponse(String email, boolean isAccepted, final CommandContext context) {
-        System.out.println("Processing response for email: " + email);
-        System.out.println("Is accepted: " + isAccepted);
+        System.out.println("Processing response for email: " + email + " with isAccepted: " + isAccepted);
         System.out.println("Commands: " + commands.size());
 
         for (SplitPayment command : commands) {
