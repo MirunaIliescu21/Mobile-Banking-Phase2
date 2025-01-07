@@ -82,6 +82,7 @@ public final class CommandActions {
      * @param command the command to be executed
      */
     public void addAccount(final CommandInput command, final CommandContext context) {
+        System.out.println("addAccount " + command.getTimestamp() + " " + command.getAccountType());
         User user = findUserByEmail(context.getUsers(), command.getEmail());
         try {
             if (user == null) {
@@ -96,8 +97,12 @@ public final class CommandActions {
                 user.findAccountByIban(iban).setInterestRate(command.getInterestRate());
             }
 
+            if (command.getAccountType().equals("business")) {
+                user.setRole("owner");
+            }
+
             Transaction transaction = new Transaction.TransactionBuilder(command.getTimestamp(),
-                    "New account created", iban)
+                    "New account created", iban, "create")
                     .build();
             user.addTransaction(transaction);
         } catch (UserNotFoundException e) {
@@ -120,7 +125,7 @@ public final class CommandActions {
                 String cardNumber = Utils.generateCardNumber();
                 account.addCard(new Card(cardNumber, "active", "normal"));
                 Transaction transaction = new Transaction.TransactionBuilder(command.getTimestamp(),
-                        "New card created", account.getIban())
+                        "New card created", account.getIban(), "create")
                         .card(cardNumber)
                         .cardHolder(user.getEmail())
                         .build();
@@ -155,7 +160,7 @@ public final class CommandActions {
 
             // Add a success transaction to the user
             Transaction transaction = new Transaction.TransactionBuilder(command.getTimestamp(),
-                    "New card created", account.getIban())
+                    "New card created", account.getIban(), "create")
                     .card(cardNumber)
                     .cardHolder(user.getEmail())
                     .build();
@@ -173,11 +178,18 @@ public final class CommandActions {
      */
     public void addFunds(final CommandInput command, final CommandContext context) {
         System.out.println("addFunds " + command.getTimestamp());
+        User emailUser = findUserByEmail(context.getUsers(), command.getEmail());
         for (User user : context.getUsers()) {
             Account account = user.findAccountByIban(command.getAccount());
-            if (account != null) {
+            if (account != null && !emailUser.getRole().equals("employee")) {
                 account.addFunds(command.getAmount());
+                System.out.println("S-au adaugat: " + command.getAmount());
                 System.out.println("account balance " + account.getIban() + " adaugarea de fonduri: " + account.getBalance() + " " + account.getCurrency());
+                Transaction transaction = new Transaction.TransactionBuilder(command.getTimestamp(),
+                        "Funds added", account.getIban(), "deposit")
+                        .amount(command.getAmount())
+                        .build();
+                emailUser.addTransaction(transaction);
                 break;
             }
         }
@@ -218,7 +230,7 @@ public final class CommandActions {
             if (accountToDelete.getBalance() != 0) {
                 Transaction transaction = new Transaction.TransactionBuilder(timestamp,
                         "Account couldn't be deleted - there are funds remaining",
-                        accountToDelete.getIban())
+                        accountToDelete.getIban(), "delete")
                         .build();
                 userWithAccount.addTransaction(transaction);
 
@@ -312,7 +324,7 @@ public final class CommandActions {
                 cardToDelete.setStatus("destroyed");
                 account.getCards().remove(cardToDelete);
                 Transaction transaction = new Transaction.TransactionBuilder(timestamp,
-                        "The card has been destroyed", account.getIban())
+                        "The card has been destroyed", account.getIban(), "delete")
                         .card(cardNumber)
                         .cardHolder(user.getEmail())
                         .build();
@@ -340,13 +352,18 @@ public final class CommandActions {
      * or errors, maintaining a complete audit trail of the process.
      * @param command Command input containing email, card number, amount, and currency.
      */
-        public void payOnline(final CommandInput command,
+    public void payOnline(final CommandInput command,
                           final CommandContext context) throws UserNotFoundException,
                                                                CardNotFoundException,
                                                                UnauthorizedCardAccessException,
                                                                InsufficientFundsException,
                                                                UnauthorizedCardStatusException {
-            System.out.println("payOnline " + command.getTimestamp());
+        System.out.println("payOnline " + command.getTimestamp());
+
+        if (command.getAmount() <= 0) {
+            System.out.println("Invalid amount");
+            return;
+        }
         String email = command.getEmail();
         String cardNumber = command.getCardNumber();
         int timestamp = command.getTimestamp();
@@ -355,11 +372,13 @@ public final class CommandActions {
         Card cardUser = null;
         Account accountUser = null;
 
+
         try {
             // Check if the user exists
             if (user == null) {
                 throw new UserNotFoundException("User not found");
             }
+            System.out.println("Userul este: " + user.getRole());
 
             // Search for the card in each account of the user
             for (Account account : user.getAccounts()) {
@@ -370,15 +389,27 @@ public final class CommandActions {
                 }
             }
 
+            if (cardUser == null && (!user.getRole().equals("owner") && !user.getRole().equals("user"))) {
+                System.out.println("Caut printe cardurile ownerului");
+                Account ownerAccount = user.getOwnerAccount();
+                if (ownerAccount.findCardByNumber(cardNumber) != null) {
+                    System.out.println("Cardul a fost gasit printre cardurile ownerului");
+                    cardUser = ownerAccount.findCardByNumber(cardNumber);
+                    accountUser = ownerAccount;
+                }
+            }
+
             // If the card was not found, add an error to the output
             if (cardUser == null) {
+                System.out.println("Card not found");
                 throw new CardNotFoundException("Card not found");
             }
 
             // Check if the user owns the card
-            if (!accountUser.getOwner().equals(email)) {
+            if (!accountUser.getOwner().equals(email) && user.getRole().equals("owner")) {
                 throw new UnauthorizedCardAccessException("User does not own the card");
             }
+
             // Convert the amount to the account currency
             double amountInAccountCurrency;
             amountInAccountCurrency = context.getCurrencyConverter().
@@ -433,8 +464,8 @@ public final class CommandActions {
                 cardUser.setStatus("active");
                 System.out.println("S-A EFECTUAT TRANZACTIA CU SUCCES account balance " + accountUser.getIban() + " plata online: " + accountUser.getBalance() + " " + accountUser.getCurrency());
                 Transaction transaction = new Transaction.TransactionBuilder(timestamp,
-                        "Card payment", accountUser.getIban())
-                        .amount(amountInAccountCurrency)
+                        "Card payment", accountUser.getIban(), "spending")
+                        .amount(roundToTwoDecimals(amountInAccountCurrency))
                         .commerciant(command.getCommerciant())
                         .build();
                 user.addTransaction(transaction);
@@ -445,7 +476,7 @@ public final class CommandActions {
                     cardUser.setStatus("destroyed");
                     accountUser.getCards().remove(cardUser);
                     Transaction transaction1 = new Transaction.TransactionBuilder(timestamp,
-                            "The card has been destroyed", accountUser.getIban())
+                            "The card has been destroyed", accountUser.getIban(), "delete")
                             .card(cardNumber)
                             .cardHolder(user.getEmail())
                             .build();
@@ -457,7 +488,7 @@ public final class CommandActions {
 
                     Transaction transaction2;
                     transaction2 = new Transaction.TransactionBuilder(command.getTimestamp(),
-                            "New card created", accountUser.getIban())
+                            "New card created", accountUser.getIban(), "delete")
                             .card(newCardNumber)
                             .cardHolder(user.getEmail())
                             .build();
@@ -476,7 +507,7 @@ public final class CommandActions {
         } catch (InsufficientFundsException | UnauthorizedCardStatusException e) {
             // Add a transaction to the account
             Transaction transaction = new Transaction.TransactionBuilder(timestamp,
-                    e.getMessage(), accountUser.getIban()).build();
+                    e.getMessage(), accountUser.getIban(), "error").build();
             user.addTransaction(transaction);
         } catch (IllegalArgumentException e) {
             // Add an error to the output if the currency conversion is not supported
@@ -522,7 +553,7 @@ public final class CommandActions {
         } catch (InsufficientFundsException e) {
             // Add a transaction to the sender's account
             Transaction transaction = new Transaction.TransactionBuilder(command.getTimestamp(),
-                    "Insufficient funds", senderAccount.getIban())
+                    "Insufficient funds", senderAccount.getIban(), "error")
                     .build();
             senderUser.addTransaction(transaction);
             throw new InsufficientFundsException("Insufficient funds.");
@@ -580,15 +611,20 @@ public final class CommandActions {
         System.out.println("commission: " + commission);
         double finalAmount = amount + commission;
 
+        double newBalance = senderAccount.getBalance() - finalAmount;
+        if (newBalance < senderAccount.getMinimumBalance()) {
+            System.out.println("Insufficient funds at timestamp " + command.getTimestamp());
+            throw new InsufficientFundsException("Insufficient funds");
+        }
         // Make the actual transaction
-        senderAccount.setBalance(senderAccount.getBalance() - finalAmount);
-        receiverAccount.setBalance(receiverAccount.getBalance() + convertedAmount);
+        senderAccount.setBalance(roundToTwoDecimals(senderAccount.getBalance() - finalAmount));
+        receiverAccount.setBalance(roundToTwoDecimals(receiverAccount.getBalance() + convertedAmount));
         System.out.println("senderAccount balance: " + senderAccount.getBalance() + " " + senderCurrency);
         System.out.println("receiverAccount balance: " + receiverAccount.getBalance() + " " + receiverCurrency);
 
         // Add the transaction to the sender's account
         Transaction senderTransaction = new Transaction.TransactionBuilder(command.getTimestamp(),
-                command.getDescription(), senderAccount.getIban())
+                command.getDescription(), senderAccount.getIban(), "spending")
                 .senderIBAN(senderIBAN)
                 .receiverIBAN(receiverIBAN)
                 .amountCurrency(amount + " " + senderCurrency)
@@ -599,7 +635,8 @@ public final class CommandActions {
         // Add the transaction to the receiver's account
         Transaction receiverTransaction = new Transaction.TransactionBuilder(command.getTimestamp(),
                 command.getDescription(),
-                receiverAccount.getIban())
+                receiverAccount.getIban(),
+                "deposit")
                 .senderIBAN(senderIBAN)
                 .receiverIBAN(receiverIBAN)
                 .amountCurrency(convertedAmount + " " + receiverCurrency)
@@ -734,7 +771,8 @@ public final class CommandActions {
         } catch (InsufficientFundsException e) {
             Transaction transaction = new Transaction.TransactionBuilder(command.getTimestamp(),
                     e.getMessage(),
-                    cardAccount.getIban())
+                    cardAccount.getIban(),
+                    "error")
                     .build();
             cardUser.addTransaction(transaction);
         }
@@ -968,61 +1006,15 @@ public final class CommandActions {
     }
 
     public void acceptSplitPayment(final CommandInput command, final CommandContext context) {
+        System.out.println("acceptSplitPayment " + command.getTimestamp() + " for account " + command.getEmail());
         PaymentProcessor paymentProcessor = PaymentProcessor.getInstance();
-        paymentProcessor.processResponse(command.getEmail(), true, context);
+        paymentProcessor.processResponse(command.getEmail(), true, context, command.getSplitPaymentType());
     }
 
     public void rejectSplitPayment(final CommandInput command, final CommandContext context) {
         PaymentProcessor paymentProcessor = PaymentProcessor.getInstance();
-        paymentProcessor.processResponse(command.getEmail(), false, context);
+        paymentProcessor.processResponse(command.getEmail(), false, context, command.getSplitPaymentType());
     }
-
-    private void processSplitPayment(CommandInput splitPaymentCommand, CommandContext context) {
-        int timestamp = splitPaymentCommand.getTimestamp();
-        List<String> accountsForSplit = splitPaymentCommand.getAccounts();
-        List<Double> amountsForUsers = splitPaymentCommand.getAmountForUsers();
-        String currency = splitPaymentCommand.getCurrency();
-        double totalAmount = splitPaymentCommand.getAmount();
-
-        for (int i = 0; i < accountsForSplit.size(); i++) {
-            String iban = accountsForSplit.get(i);
-            double amountForUser = amountsForUsers.get(i);
-
-            Account account = User.findAccountByIBAN(context.getUsers(), iban);
-            if (account == null) {
-                addError(context.getOutput(), "Account not found: " + iban, timestamp, "processSplitPayment");
-                return;
-            }
-
-            try {
-                // Convertire valutară
-                double convertedAmount = context.getCurrencyConverter().convertCurrency(amountForUser, currency, account.getCurrency());
-
-                // Debitarea contului
-                account.setBalance(account.getBalance() - convertedAmount);
-
-                // Înregistrare tranzacție de succes
-                Transaction successTransaction = new Transaction.TransactionBuilder(timestamp,
-                        "Split payment of " + String.format("%.2f", totalAmount) + " " + currency,
-                        account.getIban())
-                        .error(null)
-                        .amount(amountForUser)
-                        .amountCurrency(currency)
-                        .involvedAccounts(accountsForSplit)
-                        .build();
-
-                User user = User.findUserByAccount(context.getUsers(), account);
-                if (user != null) {
-                    user.addTransaction(successTransaction);
-                }
-
-            } catch (CurrencyConversionException e) {
-                addError(context.getOutput(), "Currency conversion failed for account: " + iban, timestamp, "processSplitPayment");
-                return;
-            }
-        }
-    }
-
 
     /**
      * Generate a report with the transactions of a specific account.
@@ -1063,6 +1055,151 @@ public final class CommandActions {
         commandNode.put("timestamp", command.getTimestamp());
         context.getOutput().add(commandNode);
     }
+
+    public void businessReport(final CommandInput command, final CommandContext context) {
+        Account account = User.findAccountByIBAN(context.getUsers(), command.getAccount());
+        if (account == null) {
+            addError(context.getOutput(), "Account not found",
+                    command.getTimestamp(), command.getCommand());
+            return;
+        }
+
+        User user = User.findUserByAccount(context.getUsers(), account);
+        if (user == null) {
+            addError(context.getOutput(), "User not found",
+                    command.getTimestamp(), command.getCommand());
+            return;
+        }
+        double depositLimit = account.getDepositLimit();
+        try {
+            depositLimit = context.getCurrencyConverter().convertCurrency(depositLimit, "RON", account.getCurrency());
+        } catch (CurrencyConversionException e) {
+            addError(context.getOutput(), e.getMessage(),
+                    command.getTimestamp(), command.getCommand());
+            return;
+        }
+
+        // Creare nod pentru raport
+        ObjectNode reportNode = context.getObjectMapper().createObjectNode();
+        reportNode.put("IBAN", account.getIban());
+        reportNode.put("balance", account.getBalance());
+        reportNode.put("currency", account.getCurrency());
+        reportNode.put("spending limit", account.getSpendingLimit());
+        reportNode.put("deposit limit", roundToTwoDecimals(depositLimit));
+        reportNode.put("statistics type", command.getType());
+
+        // Procesăm raportul în funcție de tip
+        switch (command.getType()) {
+            case "transaction":
+                generateTransactionReport(reportNode, command, account, context);
+                break;
+
+            case "commerciant":
+                // generateCommerciantReport(reportNode, command, account, context);
+                break;
+
+            default:
+                addError(context.getOutput(), "Invalid report type",
+                        command.getTimestamp(), command.getCommand());
+                return;
+        }
+
+        // Adăugăm raportul la context
+        ObjectNode commandNode = context.getObjectMapper().createObjectNode();
+        commandNode.put("command", "businessReport");
+        commandNode.set("output", reportNode);
+        commandNode.put("timestamp", command.getTimestamp());
+        context.getOutput().add(commandNode);
+    }
+    private void generateTransactionReport(ObjectNode reportNode, CommandInput command, Account account, CommandContext context) {
+        System.out.println("Business report " + account.getIban());
+
+        ArrayNode managersArray = context.getObjectMapper().createArrayNode();
+        ArrayNode employeesArray = context.getObjectMapper().createArrayNode();
+
+        double totalSpent = 0;
+        double totalDeposited = 0;
+
+        // Iterăm prin asociații contului
+        for (Map.Entry<String, String> entry : account.getAssociates().entrySet()) {
+            String email = entry.getKey();
+            String role = entry.getValue();
+            System.out.println("email: " + email + " role: " + role);
+
+            User user = User.findUserByEmail(context.getUsers(), email);
+            if (user == null) {
+                continue;
+            }
+
+            List<Transaction> transactions = User.getTransactionsInRange(user,
+                    command.getStartTimestamp(), command.getEndTimestamp(), account.getIban());
+
+            double spent = 0;
+            double deposited = 0;
+
+            // Calculăm totalul de cheltuieli și depozite pentru utilizator
+            for (Transaction transaction : transactions) {
+                System.out.println("transaction type: " + transaction.getType() + " amount: " + transaction.getAmount());
+                if (transaction.getType().equals("spending")) {
+                    spent += transaction.getAmount();
+                } else if (transaction.getType().equals("deposit")) {
+                    deposited += transaction.getAmount();
+                }
+            }
+
+            // Creăm un nod JSON pentru asociat
+            ObjectNode associateNode = context.getObjectMapper().createObjectNode();
+            associateNode.put("username", user.getLastName() + " " + user.getFirstName());
+            associateNode.put("spent", roundToTwoDecimals(spent));
+            associateNode.put("deposited", roundToTwoDecimals(deposited));
+
+            // Adăugăm nodul în array-ul corespunzător pe baza rolului
+            if ("manager".equals(role)) {
+                managersArray.add(associateNode);
+            } else if ("employee".equals(role)) {
+                employeesArray.add(associateNode);
+            }
+
+            // Actualizăm totalurile globale
+            totalSpent += spent;
+            totalDeposited += deposited;
+        }
+
+        // Adăugăm rezultatele în nodul raportului
+        reportNode.set("managers", managersArray);
+        reportNode.set("employees", employeesArray);
+        reportNode.put("total spent", roundToTwoDecimals(totalSpent));
+        reportNode.put("total deposited", roundToTwoDecimals(totalDeposited));
+    }
+
+    /**
+    private void generateCommerciantReport(ObjectNode reportNode, CommandInput command, Account account, CommandContext context) {
+        // Placeholder pentru raport commerciant
+        ArrayNode commerciantsArray = context.getObjectMapper().createArrayNode();
+
+        // Iterăm prin tranzacțiile contului pentru intervalul specificat
+        List<Transaction> transactions = account.getTransactionsInRange(
+                command.getStartTimestamp(), command.getEndTimestamp());
+
+        Map<String, Double> commerciantSpent = new HashMap<>();
+        for (Transaction transaction : transactions) {
+            if (transaction.isWithdrawal() && transaction.getMerchant() != null) {
+                commerciantSpent.put(transaction.getMerchant(),
+                        commerciantSpent.getOrDefault(transaction.getMerchant(), 0.0) + transaction.getAmount());
+            }
+        }
+
+        // Adăugăm datele comercianților în raport
+        for (Map.Entry<String, Double> entry : commerciantSpent.entrySet()) {
+            ObjectNode commerciantNode = context.getObjectMapper().createObjectNode();
+            commerciantNode.put("merchant", entry.getKey());
+            commerciantNode.put("spent", entry.getValue());
+            commerciantsArray.add(commerciantNode);
+        }
+
+        reportNode.set("commerciants", commerciantsArray);
+    }
+    **/
 
     /**
      * Generate a report with the spendings of a saving account.
@@ -1184,7 +1321,7 @@ public final class CommandActions {
             }
 
             Transaction transaction = new Transaction.TransactionBuilder(command.getTimestamp(),
-                    "Interest rate income", account.getIban())
+                    "Interest rate income", account.getIban(), "create")
                     .amount(rate)
                     .amountCurrency(account.getCurrency())
                     .build();
@@ -1225,7 +1362,7 @@ public final class CommandActions {
 
             Transaction transaction = new Transaction.TransactionBuilder(command.getTimestamp(),
                     "Interest rate of the account changed to " + command.getInterestRate(),
-                    account.getIban())
+                    account.getIban(), "create")
                     .build();
             user.addTransaction(transaction);
 
@@ -1256,7 +1393,7 @@ public final class CommandActions {
 
         if (!account.getType().equals("savings")) {
             Transaction transaction = new Transaction.TransactionBuilder(command.getTimestamp(),
-                    "Account is not of type savings.", accountIBAN)
+                    "Account is not of type savings.", accountIBAN, "error")
                     .build();
             user.addTransaction(transaction);
             return;
@@ -1265,7 +1402,7 @@ public final class CommandActions {
         // Check if the user is of minimum age
         if (!user.isOfMinimumAge(21)) {
             Transaction transaction = new Transaction.TransactionBuilder(command.getTimestamp(),
-                    "You don't have the minimum age required.", accountIBAN)
+                    "You don't have the minimum age required.", accountIBAN, "error")
                     .build();
             user.addTransaction(transaction);
             return;
@@ -1274,7 +1411,7 @@ public final class CommandActions {
         // Check if the account has enough funds
         if (account.getBalance() < amount) {
             Transaction transaction = new Transaction.TransactionBuilder(command.getTimestamp(),
-                    "Insufficient funds", accountIBAN)
+                    "Insufficient funds", accountIBAN, "error")
                     .build();
             user.addTransaction(transaction);
             return;
@@ -1287,7 +1424,7 @@ public final class CommandActions {
 
         if (classicAccount == null) {
             Transaction transaction = new Transaction.TransactionBuilder(command.getTimestamp(),
-                    "You do not have a classic account.", accountIBAN)
+                    "You do not have a classic account.", accountIBAN, "error")
                     .build();
             user.addTransaction(transaction);
             return;
@@ -1307,7 +1444,7 @@ public final class CommandActions {
         classicAccount.setBalance(classicAccount.getBalance() + convertedAmount);
 
         Transaction transaction = new Transaction.TransactionBuilder(command.getTimestamp(),
-                "Savings withdrawal", accountIBAN)
+                "Savings withdrawal", accountIBAN, "spending")
                 .build();
         user.addTransaction(transaction);
     }
@@ -1342,7 +1479,8 @@ public final class CommandActions {
         // Check if the user already has the desired plan
         if (user.getCurrentPlan().getPlanType().equals(newPlanType)) {
             Transaction transaction = new Transaction.TransactionBuilder(command.getTimestamp(),
-                    "The user already has the " + newPlanType + " plan.", accountIBAN)
+                    "The user already has the " + newPlanType + " plan.", accountIBAN,
+                    "error")
                     .currentPlan(user.getCurrentPlan().getPlanType())
                     .build();
             user.addTransaction(transaction);
@@ -1356,7 +1494,7 @@ public final class CommandActions {
 
         if (newPlanIndex < currentPlanIndex) {
             Transaction transaction = new Transaction.TransactionBuilder(command.getTimestamp(),
-                    "You cannot downgrade your plan.", accountIBAN)
+                    "You cannot downgrade your plan.", accountIBAN, "error")
                     .currentPlan(user.getCurrentPlan().getPlanType())
                     .build();
             user.addTransaction(transaction);
@@ -1370,7 +1508,7 @@ public final class CommandActions {
             user.setCurrentPlan(new GoldPlan());
             System.out.println("Userul a trecut automat la Gold");
             Transaction transaction = new Transaction.TransactionBuilder(command.getTimestamp(),
-                    "Upgrade plan", accountIBAN)
+                    "Upgrade plan", accountIBAN, "upgrade")
                     .currentPlan(user.getCurrentPlan().getPlanType())
                     .build();
             user.addTransaction(transaction);
@@ -1404,7 +1542,7 @@ public final class CommandActions {
         // Check if the account has enough funds for the upgrade
         if (account.getBalance() < convertedFee) {
             Transaction transaction = new Transaction.TransactionBuilder(command.getTimestamp(),
-                    "Insufficient funds", accountIBAN)
+                    "Insufficient funds", accountIBAN, "error")
                     .build();
             user.addTransaction(transaction);
             return;
@@ -1420,7 +1558,7 @@ public final class CommandActions {
         user.setCurrentPlan(newPlan);
 
         Transaction transaction = new Transaction.TransactionBuilder(command.getTimestamp(),
-                "Upgrade plan", accountIBAN)
+                "Upgrade plan", accountIBAN, "upgrade")
                 .currentPlan(user.getCurrentPlan().getPlanType())
                 .build();
         user.addTransaction(transaction);
@@ -1513,7 +1651,7 @@ public final class CommandActions {
                 cardUser.setStatus("active");
                 System.out.println("S-au extras bani CU SUCCES account balance " + accountUser.getIban() + " plata online: " + accountUser.getBalance() + " " + accountUser.getCurrency());
                 Transaction transaction = new Transaction.TransactionBuilder(timestamp,
-                        "Cash withdrawal of " + amount, accountUser.getIban())
+                        "Cash withdrawal of " + amount, accountUser.getIban(), "spending")
                         .amount(amount)
                         .error("Cash withdrawal")
                         .build();
@@ -1531,7 +1669,7 @@ public final class CommandActions {
         } catch (InsufficientFundsException | UnauthorizedCardStatusException e) {
             // Add a transaction to the account
             Transaction transaction = new Transaction.TransactionBuilder(timestamp,
-                    e.getMessage(), accountUser.getIban()).build();
+                    e.getMessage(), accountUser.getIban(), "error").build();
             user.addTransaction(transaction);
         } catch (IllegalArgumentException e) {
             // Add an error to the output if the currency conversion is not supported
@@ -1539,6 +1677,59 @@ public final class CommandActions {
                     timestamp, "cashWithdrawal");
         }
     }
+
+    public void addNewBusinessAssociate(final CommandInput command, final CommandContext context) {
+        Account account = User.findAccountByIBAN(context.getUsers(), command.getAccount());
+        if (account == null) {
+            addError(context.getOutput(), "Account not found", command.getTimestamp(), "addNewBusinessAssociate");
+            return;
+        }
+
+        User user = User.findUserByEmail(context.getUsers(), command.getEmail());
+        if (user == null) {
+            addError(context.getOutput(), "User not found", command.getTimestamp(), "addNewBusinessAssociate");
+            return;
+        }
+        user.setOwnerAccount(account);
+        user.setRole(command.getRole());
+        account.addAssociate(command.getEmail(), command.getRole());
+        System.out.println("Added new associate: " + command.getTimestamp() + " "+ command.getEmail() + " as " + command.getRole() + " to account " + account.getIban());
+    }
+
+    public void changeSpendingLimit(final CommandInput command, final CommandContext context) {
+        Account account = User.findAccountByIBAN(context.getUsers(), command.getAccount());
+        if (account == null) {
+            addError(context.getOutput(), "Account not found", command.getTimestamp(), "changeSpendingLimit");
+            return;
+        }
+
+        if (!account.isAuthorized(command.getEmail(), "changeLimits")) {
+            addError(context.getOutput(), "You are not authorized to make this transaction.",
+                    command.getTimestamp(), "changeSpendingLimit");
+            return;
+        }
+
+        account.setSpendingLimit(command.getAmount());
+        System.out.println("Spending limit updated to " + command.getAmount() + " at timestamp " + command.getTimestamp());
+    }
+
+    public void changeDepositLimit(final CommandInput command, final CommandContext context) {
+        Account account = User.findAccountByIBAN(context.getUsers(), command.getAccount());
+        if (account == null) {
+            addError(context.getOutput(), "Account not found", command.getTimestamp(), "changeDepositLimit");
+            return;
+        }
+
+        if (!account.isAuthorized(command.getEmail(), "changeLimits")) {
+            addError(context.getOutput(), "You are not authorized to make this transaction.",
+                    command.getTimestamp(), "changeDepositLimit");
+            return;
+        }
+
+        account.setDepositLimit(command.getAmount());
+        System.out.println("Deposit limit updated to " + command.getAmount());
+    }
+
 
     /**
      * Handle the default case when the command is not recognized.

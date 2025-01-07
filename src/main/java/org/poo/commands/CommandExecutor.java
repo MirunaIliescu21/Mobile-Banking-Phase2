@@ -47,6 +47,7 @@ public class CommandExecutor {
             case CHECK_CARD_STATUS -> actions.checkCardStatus(command, context);
             case SPLIT_PAYMENT -> actions.splitPayment(command, context);
             case REPORT -> actions.report(command, context);
+            case BUSINESS_REPORT -> actions.businessReport(command, context);
             case SPENDINGS_REPORT -> actions.spendingsReport(command, context);
             case ADD_INTEREST -> actions.addInterest(command, context);
             case CHANGE_INTEREST_RATE -> actions.changeInterestRate(command, context);
@@ -55,6 +56,9 @@ public class CommandExecutor {
             case CASH_WITHDRAWAL -> actions.cashWithdrawal(command, context);
             case ACCEPT_SPLIT_PAYMENT -> actions.acceptSplitPayment(command, context);
             case REJECT_SPLIT_PAYMENT -> actions.rejectSplitPayment(command, context);
+            case ADD_BUSINESS_ASSOCIATE -> actions.addNewBusinessAssociate(command, context);
+            case CHANGE_SPENDING_LIMIT -> actions.changeSpendingLimit(command, context);
+            case CHANGE_DEPOSIT_LIMIT -> actions.changeDepositLimit(command, context);
             default -> actions.handleDefault(command, context);
         }
     }

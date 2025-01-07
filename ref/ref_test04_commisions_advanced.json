@@ -323,10 +323,7 @@
     "timestamp" : 49,
     "description" : "Card payment",
     "amount" : 18.0,
-    "commerciant" : "Samsung"
-  }, {
-    "timestamp" : 50,
-    "description" : "Insufficient funds"
+    "commerciant" : "Nike"
   }, {
     "timestamp" : 51,
     "description" : "Visit to a local healthcare clinic",
@@ -358,10 +355,7 @@
     "timestamp" : 49,
     "description" : "Card payment",
     "amount" : 18.0,
-    "commerciant" : "Samsung"
-  }, {
-    "timestamp" : 50,
-    "description" : "Insufficient funds"
+    "commerciant" : "Nike"
   }, {
     "timestamp" : 51,
     "description" : "Visit to a local healthcare clinic",
@@ -378,7 +372,7 @@
     "timestamp" : 56,
     "description" : "Card payment",
     "amount" : 244.0,
-    "commerciant" : "Burger King"
+    "commerciant" : "Samsung"
   }, {
     "timestamp" : 59,
     "description" : "Cash withdrawal of 600.0",

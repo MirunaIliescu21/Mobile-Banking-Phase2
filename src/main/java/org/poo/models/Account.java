@@ -1,8 +1,8 @@
 package org.poo.models;
 
 import lombok.Data;
-import java.util.ArrayList;
-import java.util.List;
+
+import java.util.*;
 
 
 @Data
@@ -21,6 +21,9 @@ public class Account {
     private final String owner;
     private String alias;
     private double interestRate;
+    private LinkedHashMap<String, String> associates = new LinkedHashMap<>(); // Email -> Role
+    private double spendingLimit = 500; // Default spending limit in RON
+    private double depositLimit = 500; // Default deposit limit in RON
 
     public Account(final String iban, final String currency,
                    final String type, final String ownerEmail) {
@@ -63,5 +66,24 @@ public class Account {
             }
         }
         return null;
+    }
+
+    public boolean isOwner(String email) {
+        return owner.equals(email);
+    }
+
+    public void addAssociate(String email, String role) {
+        associates.put(email, role);
+    }
+
+    public boolean isAuthorized(String email, String action) {
+        String role = associates.get(email);
+        if ("changeLimits".equals(action)) {
+            return isOwner(email); // Only the owner can change the limits
+        }
+        if ("makeTransactions".equals(action)) {
+            return "manager".equals(role) || "employee".equals(role);
+        }
+        return false;
     }
 }

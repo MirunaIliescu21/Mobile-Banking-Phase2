@@ -68,6 +68,12 @@ public class SplitPayment {
             return "One user rejected the payment.";
         }
 
+        // Print all accounts and their responses
+        System.out.println("Current responses status:");
+        responses.forEach((acc, response) -> {
+            System.out.println("Account: " + acc + ", Response: " + response);
+        });
+
         // Check if all users have responded
         if (responses.values().stream().allMatch(response -> response != null && response)) {
             processSplitPayment(context);
@@ -200,6 +206,7 @@ public class SplitPayment {
         }
 
         System.out.println("S-a ajuns la invalidAccounts: " + invalidAccounts.size());
+        String firstInvalidIban = invalidAccounts.isEmpty() ? null : invalidAccounts.getFirst().getIban();
         if (!invalidAccounts.isEmpty()) {
             for (int i = 0; i < accounts.size(); i++) {
                 String iban = accounts.get(i);
@@ -216,8 +223,8 @@ public class SplitPayment {
                     // Add a transaction to the user
                     Transaction errorTransaction = new Transaction.TransactionBuilder(timestamp,
                             "Split payment of " + String.format("%.2f", amount) + " " + currency,
-                            involvedAccount.getIban())
-                            .error("Account " + lastInvalidIban
+                            involvedAccount.getIban(), "error")
+                            .error("Account " + firstInvalidIban
                                     + " has insufficient funds for a split payment.")
                             .splitPaymentType(splitPaymentType)
                             .amount(CommandActions.roundToTwoDecimals(amountForUser))
@@ -263,7 +270,7 @@ public class SplitPayment {
             System.out.println("Se adauga tranzacatie pentru userul " + user.getEmail() + " cu accountul " + account.getIban());
             Transaction successTransaction = new Transaction.TransactionBuilder(timestamp,
                     "Split payment of " + String.format("%.2f", amount) + " " + currency,
-                    account.getIban())
+                    account.getIban(), "spending")
                     .error(null)
                     .splitPaymentType(splitPaymentType)
                     .amount(CommandActions.roundToTwoDecimals(amountForUser))

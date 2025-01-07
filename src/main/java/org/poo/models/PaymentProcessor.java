@@ -2,10 +2,7 @@ package org.poo.models;
 
 import org.poo.commands.CommandContext;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class PaymentProcessor {
     private static PaymentProcessor instance = null; // Singleton instance
@@ -27,12 +24,16 @@ public class PaymentProcessor {
         commands.add(payment);
     }
 
-    public void processResponse(String email, boolean isAccepted, final CommandContext context) {
+    public void processResponse(String email, boolean isAccepted, final CommandContext context, final String paymentType) {
         System.out.println("Processing response for email: " + email + " with isAccepted: " + isAccepted);
         System.out.println("Commands: " + commands.size());
 
         for (SplitPayment command : commands) {
             System.out.println("Command: " + command.getSplitPaymentType());
+            if (!command.getSplitPaymentType().equals(paymentType)) {
+                System.out.println("Procesarea nu este pentru acest tip de comanda");
+                continue;
+            }
             command.getEmailToAccount().forEach((key, value) -> System.out.println("Email: " + key + ", Account: " + value));
 
             String iban = command.getEmailToAccount().get(email);

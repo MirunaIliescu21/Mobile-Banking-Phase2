@@ -15,6 +15,7 @@ import java.util.List;
 public final class Transaction {
     private final int timestamp;
     private final String description;
+    private final String type;
     private final String senderIBAN;
     private final String receiverIBAN;
     private final String account;
@@ -34,6 +35,7 @@ public final class Transaction {
     private Transaction(final TransactionBuilder builder) {
         this.timestamp = builder.timestamp;
         this.description = builder.description;
+        this.type = builder.type;
         this.senderIBAN = builder.senderIBAN;
         this.receiverIBAN = builder.receiverIBAN;
         this.account = builder.account;
@@ -53,6 +55,7 @@ public final class Transaction {
     public static class TransactionBuilder {
         private final int timestamp;
         private final String description;
+        private final String type;
         private String senderIBAN;
         private String receiverIBAN;
         private String account;
@@ -70,10 +73,12 @@ public final class Transaction {
 
         public TransactionBuilder(final int timestamp,
                                   final String description,
-                                  final String iban) {
+                                  final String iban,
+                                  final String type) {
             this.timestamp = timestamp;
             this.description = description;
             account = iban;
+            this.type = type;
         }
 
         /**

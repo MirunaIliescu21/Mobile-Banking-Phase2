@@ -20,6 +20,7 @@ public enum CommandType {
     SPLIT_PAYMENT("splitPayment"),
     REPORT("report"),
     SPENDINGS_REPORT("spendingsReport"),
+    BUSINESS_REPORT("businessReport"),
     ADD_INTEREST("addInterest"),
     CHANGE_INTEREST_RATE("changeInterestRate"),
     WITHDRAW_SAVINGS("withdrawSavings"),
@@ -27,6 +28,9 @@ public enum CommandType {
     CASH_WITHDRAWAL("cashWithdrawal"),
     ACCEPT_SPLIT_PAYMENT("acceptSplitPayment"),
     REJECT_SPLIT_PAYMENT("rejectSplitPayment"),
+    ADD_BUSINESS_ASSOCIATE("addNewBusinessAssociate"),
+    CHANGE_SPENDING_LIMIT("changeSpendingLimit"),
+    CHANGE_DEPOSIT_LIMIT("changeDepositLimit"),
     DEFAULT("default");
 
     private final String commandName;

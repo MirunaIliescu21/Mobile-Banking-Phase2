@@ -27,6 +27,7 @@ public abstract class TransactionExecutor {
         TRANSACTION_HANDLERS.put("upgradePlan", new UpgradePlanHandler());
         TRANSACTION_HANDLERS.put("cashWithdrawal", new CashWithdrawalHandler());
         TRANSACTION_HANDLERS.put("addInterest", new AddInterestHandler());
+        TRANSACTION_HANDLERS.put("addFunds", new AddFundsHandler());
 
         // Use DefaultTransactionHandler for non-specific cases
         TransactionHandler defaultHandler = new DefaultTransactionHandler();

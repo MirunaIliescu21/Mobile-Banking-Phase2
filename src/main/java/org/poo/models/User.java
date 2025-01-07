@@ -28,6 +28,8 @@ public class User {
     private ServicePlan currentPlan;
     private Set<String> receivedCashbacks = new HashSet<>(); // Ex. "Food", "Clothes", "Tech"
     private double totalSpending;
+    private String role;
+    private Account ownerAccount;
 
     public User(final String firstName, final String lastName, final String email
             , final String birthDate, final String occupation) {
@@ -41,6 +43,8 @@ public class User {
         // Set the default plan based on the occupation
         currentPlan = occupation.equals("student") ? new StudentPlan() : new StandardPlan();
         totalSpending = 0;
+        ownerAccount = null;
+        role = "user";
     }
 
     /**
@@ -145,6 +149,10 @@ public class User {
         // Sorting the transactions by timestamp
         transactions.sort(Comparator.comparingInt(Transaction::getTimestamp));
         for (Transaction transaction : transactions) {
+            // Ignoring the "Funds added" transaction
+            if (transaction.getDescription().equals("Funds added")) {
+                continue;
+            }
             // Searching for the current transaction
             String transactionType = determineTransactionType(transaction);
 
@@ -188,6 +196,8 @@ public class User {
             return "upgradePlan";
         } else if (transaction.getAmount() != 0 && transaction.getError().equalsIgnoreCase("Cash withdrawal")) {
             return "cashWithdrawal";
+        } else if (transaction.getDescription().equalsIgnoreCase("Funds added")) {
+            return "addFunds";
         }
         return "unknown";
     }
@@ -209,6 +219,10 @@ public class User {
 
         int prevTimestamp = 0;
         for (Transaction transaction : transactions) {
+            // Ignoring the "Funds added" transaction
+            if (transaction.getDescription().equals("Funds added")) {
+                continue;
+            }
             // Checking if the transaction is for the user's account
             if (!transaction.getAccount().equals(accountIban)) {
                 continue;
@@ -265,6 +279,10 @@ public class User {
         transactions.sort(Comparator.comparingInt(Transaction::getTimestamp));
 
         for (Transaction transaction : transactions) {
+            // Ignoring the "Funds added" transaction
+            if (transaction.getDescription().equals("Funds added")) {
+                continue;
+            }
             // Check if the transaction is within the specified time interval
             if (transaction.getTimestamp() < startTimestamp) {
                 continue;
@@ -388,5 +406,35 @@ public class User {
             }
         }
         return totalSpending;
+    }
+
+    /**
+     * Retrieves the transactions of the user within a specified time interval.
+     *
+     * @param startTimestamp the start timestamp
+     * @param endTimestamp   the end timestamp
+     * @param accountIban    the IBAN of the account
+     * @return a list of transactions within the specified interval
+     */
+    public static List<Transaction> getTransactionsInRange(final User user,
+                                                    final int startTimestamp,
+                                                    final int endTimestamp,
+                                                    final String accountIban) {
+        // user.getTransactions().sort(Comparator.comparingInt(Transaction::getTimestamp));
+
+        List<Transaction> filteredTransactions = new ArrayList<>();
+        for (Transaction transaction : user.getTransactions()) {
+            System.out.println("transaction: " + " timestamp " + transaction.getTimestamp() + " " + transaction.getDescription() + " transactionAccount: " + transaction.getAccount() + " accountIban: " + accountIban);
+            // Filtrăm tranzacțiile pentru contul specificat
+            if (!transaction.getAccount().equals(accountIban)) {
+                continue;
+            }
+
+            // Verificăm dacă tranzacția se încadrează în intervalul de timp
+            if (transaction.getTimestamp() >= startTimestamp && transaction.getTimestamp() <= endTimestamp) {
+                filteredTransactions.add(transaction);
+            }
+        }
+        return filteredTransactions;
     }
 }
