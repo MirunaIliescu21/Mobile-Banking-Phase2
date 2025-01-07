@@ -445,6 +445,7 @@ public final class CommandActions {
 
             // Apply commission and cashback
             double finalAmount = amountInAccountCurrency + commission - cashback;
+            // finalAmount = roundToTwoDecimals(finalAmount);
             System.out.println("finalAmount: " + finalAmount + " " + accountUser.getCurrency());
 
             // Check if the card is active amd if the account has enough funds
@@ -459,10 +460,12 @@ public final class CommandActions {
 
             // Make the payment
             accountUser.setBalance(accountUser.getBalance() - finalAmount);
+            accountUser.setBalance(roundToTwoDecimals(accountUser.getBalance()));
             if (cardUser.getStatus().equals("active")
                     && accountUser.getBalance() >= accountUser.getMinimumBalance()) {
                 cardUser.setStatus("active");
                 System.out.println("S-A EFECTUAT TRANZACTIA CU SUCCES account balance " + accountUser.getIban() + " plata online: " + accountUser.getBalance() + " " + accountUser.getCurrency());
+                accountUser.setBalance(roundToTwoDecimals(accountUser.getBalance()));
                 Transaction transaction = new Transaction.TransactionBuilder(timestamp,
                         "Card payment", accountUser.getIban(), "spending")
                         .amount(roundToTwoDecimals(amountInAccountCurrency))
@@ -1071,8 +1074,10 @@ public final class CommandActions {
             return;
         }
         double depositLimit = account.getDepositLimit();
+        double spendingLimit = account.getSpendingLimit();
         try {
             depositLimit = context.getCurrencyConverter().convertCurrency(depositLimit, "RON", account.getCurrency());
+            spendingLimit = context.getCurrencyConverter().convertCurrency(spendingLimit, "RON", account.getCurrency());
         } catch (CurrencyConversionException e) {
             addError(context.getOutput(), e.getMessage(),
                     command.getTimestamp(), command.getCommand());
@@ -1082,9 +1087,9 @@ public final class CommandActions {
         // Creare nod pentru raport
         ObjectNode reportNode = context.getObjectMapper().createObjectNode();
         reportNode.put("IBAN", account.getIban());
-        reportNode.put("balance", account.getBalance());
+        reportNode.put("balance", roundToTwoDecimals(account.getBalance()));
         reportNode.put("currency", account.getCurrency());
-        reportNode.put("spending limit", account.getSpendingLimit());
+        reportNode.put("spending limit", roundToTwoDecimals(spendingLimit));
         reportNode.put("deposit limit", roundToTwoDecimals(depositLimit));
         reportNode.put("statistics type", command.getType());
 
@@ -1704,13 +1709,22 @@ public final class CommandActions {
         }
 
         if (!account.isAuthorized(command.getEmail(), "changeLimits")) {
-            addError(context.getOutput(), "You are not authorized to make this transaction.",
+            addError(context.getOutput(), "You must be owner in order to change spending limit.",
                     command.getTimestamp(), "changeSpendingLimit");
             return;
         }
 
-        account.setSpendingLimit(command.getAmount());
-        System.out.println("Spending limit updated to " + command.getAmount() + " at timestamp " + command.getTimestamp());
+        double amountInRON = 0;
+        try {
+            amountInRON = context.getCurrencyConverter().convertCurrency(command.getAmount(),
+                    account.getCurrency(), "RON");
+        } catch (CurrencyConversionException e) {
+            addError(context.getOutput(), e.getMessage(), command.getTimestamp(), "changeDepositLimit");
+            return;
+        }
+        // Set the deposit limit in RON
+        account.setSpendingLimit(amountInRON);
+        System.out.println("Spending limit updated to " + command.getAmount() + " " + account.getCurrency() + " = "+  account.getSpendingLimit() + " RON at timestamp " + command.getTimestamp());
     }
 
     public void changeDepositLimit(final CommandInput command, final CommandContext context) {
@@ -1726,8 +1740,17 @@ public final class CommandActions {
             return;
         }
 
-        account.setDepositLimit(command.getAmount());
-        System.out.println("Deposit limit updated to " + command.getAmount());
+        double amountInRON = 0;
+        try {
+            amountInRON = context.getCurrencyConverter().convertCurrency(command.getAmount(),
+                    account.getCurrency(), "RON");
+        } catch (CurrencyConversionException e) {
+            addError(context.getOutput(), e.getMessage(), command.getTimestamp(), "changeDepositLimit");
+            return;
+        }
+        // Set the deposit limit in RON
+        account.setDepositLimit(amountInRON);
+        System.out.println("Deposit limit updated to " + command.getAmount() + " " + account.getCurrency() + " = "+ amountInRON + " RON at timestamp " + command.getTimestamp());
     }
 
 
