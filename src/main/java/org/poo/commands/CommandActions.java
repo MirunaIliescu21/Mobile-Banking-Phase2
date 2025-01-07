@@ -1010,11 +1010,38 @@ public final class CommandActions {
 
     public void acceptSplitPayment(final CommandInput command, final CommandContext context) {
         System.out.println("acceptSplitPayment " + command.getTimestamp() + " for account " + command.getEmail());
+        try {
+            if (command.getEmail() == null) {
+                throw new IllegalArgumentException("User not found");
+            }
+            User user = User.findUserByEmail(context.getUsers(), command.getEmail());
+            if (user == null) {
+                throw new IllegalArgumentException("User not found");
+            }
+        } catch (IllegalArgumentException e) {
+            System.out.println("User not found");
+            addError(context.getOutput(), e.getMessage(), command.getTimestamp(), "rejectSplitPayment");
+            return;
+        }
         PaymentProcessor paymentProcessor = PaymentProcessor.getInstance();
         paymentProcessor.processResponse(command.getEmail(), true, context, command.getSplitPaymentType());
     }
 
     public void rejectSplitPayment(final CommandInput command, final CommandContext context) {
+        System.out.println("rejectSplitPayment " + command.getTimestamp() + " for account " + command.getEmail());
+        try {
+            if (command.getEmail() == null) {
+                throw new IllegalArgumentException("User not found");
+            }
+            User user = User.findUserByEmail(context.getUsers(), command.getEmail());
+            if (user == null) {
+                throw new IllegalArgumentException("User not found");
+            }
+        } catch (IllegalArgumentException e) {
+            System.out.println("User not found");
+            addError(context.getOutput(), e.getMessage(), command.getTimestamp(), "rejectSplitPayment");
+            return;
+        }
         PaymentProcessor paymentProcessor = PaymentProcessor.getInstance();
         paymentProcessor.processResponse(command.getEmail(), false, context, command.getSplitPaymentType());
     }
