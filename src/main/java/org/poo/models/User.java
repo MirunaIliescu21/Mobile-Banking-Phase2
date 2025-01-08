@@ -118,6 +118,23 @@ public class User {
     }
 
     /**
+     * Find a specific account by its alias.
+     * @param users the list of users
+     * @param alias the alias of the account to be found
+     * @return  the account with the specified alias or null if it does not exist
+     */
+    public static Account findAccountByAlias(final List<User> users, final String alias) {
+        for (User user : users) {
+            for (Account account : user.getAccounts()) {
+                if (account.getAlias().equals(alias)) {
+                    return account;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
      * Check if the user has an account with the specified alias.
      * @param alias the alias of the account
      * @return true if the user has an account with the specified alias, false otherwise
@@ -136,7 +153,6 @@ public class User {
      * @param transaction the specific transaction to be added
      */
     public void addTransaction(final Transaction transaction) {
-        System.out.println("Adding transaction: " + transaction.getDescription());
         transactions.add(transaction);
     }
 
@@ -194,6 +210,8 @@ public class User {
             return "splitPayment";
         } else if (transaction.getCurrentPlan() != null) {
             return "upgradePlan";
+        } else if (transaction.getDescription().equalsIgnoreCase("Savings withdrawal")) {
+            return "withdrawalSavings";
         } else if (transaction.getAmount() != 0 && transaction.getError().equalsIgnoreCase("Cash withdrawal")) {
             return "cashWithdrawal";
         } else if (transaction.getDescription().equalsIgnoreCase("Funds added")) {
@@ -424,7 +442,6 @@ public class User {
 
         List<Transaction> filteredTransactions = new ArrayList<>();
         for (Transaction transaction : user.getTransactions()) {
-            System.out.println("transaction: " + " timestamp " + transaction.getTimestamp() + " " + transaction.getDescription() + " transactionAccount: " + transaction.getAccount() + " accountIban: " + accountIban);
             // Filtrăm tranzacțiile pentru contul specificat
             if (!transaction.getAccount().equals(accountIban)) {
                 continue;

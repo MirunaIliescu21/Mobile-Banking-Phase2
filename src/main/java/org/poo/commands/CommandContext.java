@@ -50,6 +50,16 @@ public class CommandContext {
         throw new IllegalArgumentException("Commerciant with name " + name + " not found");
     }
 
+    public Commerciant findCommerciantByIban(String iban) {
+        for (Commerciant commerciant : commerciants) {
+            if (commerciant.getAccount().equalsIgnoreCase(iban)) {
+                return commerciant;
+            }
+        }
+        return null;
+        // throw new IllegalArgumentException("Commerciant with iban " + iban + " not found");
+    }
+
     public void addOutputMessage(String message, CommandContext context) {
         ObjectNode outputNode = context.getObjectMapper().createObjectNode();
         outputNode.put("message", message);

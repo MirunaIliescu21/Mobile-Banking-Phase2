@@ -31,6 +31,8 @@ public final class Transaction {
     private List<String> involvedAccounts = null;
     private List<Double> amounts = null;
     private String splitPaymentType;
+    private final String classicAccountIBAN;
+    private final String savingsAccountIBAN;
 
     private Transaction(final TransactionBuilder builder) {
         this.timestamp = builder.timestamp;
@@ -50,6 +52,8 @@ public final class Transaction {
         this.currentPlan = builder.currentPlan;
         this.amounts = builder.amounts;
         this.splitPaymentType = builder.splitPaymentType;
+        this.classicAccountIBAN = builder.classicAccountIBAN;
+        this.savingsAccountIBAN = builder.savingsAccountIBAN;
     }
 
     public static class TransactionBuilder {
@@ -70,6 +74,8 @@ public final class Transaction {
         private String error;
         private List<Double> amounts;
         private String splitPaymentType;
+        private String classicAccountIBAN;
+        private String savingsAccountIBAN;
 
         public TransactionBuilder(final int timestamp,
                                   final String description,
@@ -207,6 +213,26 @@ public final class Transaction {
          */
         public TransactionBuilder splitPaymentType(final String type) {
             splitPaymentType = type;
+            return this;
+        }
+
+        /**
+         * Set the classic account IBAN for the transaction.
+         * @param iban The classic account IBAN
+         * @return The transaction builder
+         */
+        public TransactionBuilder classicAccountIBAN(final String iban) {
+            classicAccountIBAN = iban;
+            return this;
+        }
+
+        /**
+         * Set the savings account IBAN for the transaction.
+         * @param iban The savings account IBAN
+         * @return The transaction builder
+         */
+        public TransactionBuilder savingsAccountIBAN(final String iban) {
+            savingsAccountIBAN = iban;
             return this;
         }
 
