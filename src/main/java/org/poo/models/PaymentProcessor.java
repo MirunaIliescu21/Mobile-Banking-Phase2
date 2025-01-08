@@ -34,7 +34,7 @@ public class PaymentProcessor {
                 System.out.println("Procesarea nu este pentru acest tip de comanda");
                 continue;
             }
-            command.getEmailToAccount().forEach((key, value) -> System.out.println("Email: " + key + ", Account: " + value));
+            // command.getEmailToAccount().forEach((key, value) -> System.out.println("Email: " + key + ", Account: " + value));
 
             String iban = command.getEmailToAccount().get(email);
             if (iban == null) {
@@ -42,7 +42,7 @@ public class PaymentProcessor {
                 continue;
             }
             if (!command.isCompleted() && command.getAccounts().contains(iban)) {
-                String result = command.processResponse(iban, isAccepted, command.getAccountBalances(), context);
+                String result = command.processResponse(iban, isAccepted, command.getSplitPaymentType(), context);
                 if (command.isCompleted()) {
                     System.out.println("Command completed");
                     commands.remove(command);
@@ -50,7 +50,7 @@ public class PaymentProcessor {
                 if (result != null) {
                     System.out.println(result);
                 }
-                return;
+                // return;
             }
         }
         System.out.println("No active split payment found for email: " + email);

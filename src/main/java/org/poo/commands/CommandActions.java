@@ -51,7 +51,7 @@ public final class CommandActions {
             for (Account account : user.getAccounts()) {
                 ObjectNode accountNode = context.getObjectMapper().createObjectNode();
                 accountNode.put("IBAN", account.getIban());
-                accountNode.put("balance", roundToTwoDecimals(account.getBalance()));
+                accountNode.put("balance", account.getBalance());
                 accountNode.put("currency", account.getCurrency());
                 accountNode.put("type", account.getType());
 
@@ -445,7 +445,6 @@ public final class CommandActions {
 
             // Apply commission and cashback
             double finalAmount = amountInAccountCurrency + commission - cashback;
-            // finalAmount = roundToTwoDecimals(finalAmount);
             System.out.println("finalAmount: " + finalAmount + " " + accountUser.getCurrency());
 
             // Check if the card is active amd if the account has enough funds
@@ -460,15 +459,15 @@ public final class CommandActions {
 
             // Make the payment
             accountUser.setBalance(accountUser.getBalance() - finalAmount);
-            accountUser.setBalance(roundToTwoDecimals(accountUser.getBalance()));
+            accountUser.setBalance((accountUser.getBalance()));
             if (cardUser.getStatus().equals("active")
                     && accountUser.getBalance() >= accountUser.getMinimumBalance()) {
                 cardUser.setStatus("active");
                 System.out.println("S-A EFECTUAT TRANZACTIA CU SUCCES account balance " + accountUser.getIban() + " plata online: " + accountUser.getBalance() + " " + accountUser.getCurrency());
-                accountUser.setBalance(roundToTwoDecimals(accountUser.getBalance()));
+                accountUser.setBalance((accountUser.getBalance()));
                 Transaction transaction = new Transaction.TransactionBuilder(timestamp,
                         "Card payment", accountUser.getIban(), "spending")
-                        .amount(roundToTwoDecimals(amountInAccountCurrency))
+                        .amount((amountInAccountCurrency))
                         .commerciant(command.getCommerciant())
                         .build();
                 user.addTransaction(transaction);
@@ -620,8 +619,8 @@ public final class CommandActions {
             throw new InsufficientFundsException("Insufficient funds");
         }
         // Make the actual transaction
-        senderAccount.setBalance(roundToTwoDecimals(senderAccount.getBalance() - finalAmount));
-        receiverAccount.setBalance(roundToTwoDecimals(receiverAccount.getBalance() + convertedAmount));
+        senderAccount.setBalance((senderAccount.getBalance() - finalAmount));
+        receiverAccount.setBalance((receiverAccount.getBalance() + convertedAmount));
         System.out.println("senderAccount balance: " + senderAccount.getBalance() + " " + senderCurrency);
         System.out.println("receiverAccount balance: " + receiverAccount.getBalance() + " " + receiverCurrency);
 
@@ -1020,7 +1019,7 @@ public final class CommandActions {
             }
         } catch (IllegalArgumentException e) {
             System.out.println("User not found");
-            addError(context.getOutput(), e.getMessage(), command.getTimestamp(), "rejectSplitPayment");
+            addError(context.getOutput(), e.getMessage(), command.getTimestamp(), command.getCommand());
             return;
         }
         PaymentProcessor paymentProcessor = PaymentProcessor.getInstance();
@@ -1039,7 +1038,7 @@ public final class CommandActions {
             }
         } catch (IllegalArgumentException e) {
             System.out.println("User not found");
-            addError(context.getOutput(), e.getMessage(), command.getTimestamp(), "rejectSplitPayment");
+            addError(context.getOutput(), e.getMessage(), command.getTimestamp(), command.getCommand());
             return;
         }
         PaymentProcessor paymentProcessor = PaymentProcessor.getInstance();
@@ -1114,10 +1113,10 @@ public final class CommandActions {
         // Creare nod pentru raport
         ObjectNode reportNode = context.getObjectMapper().createObjectNode();
         reportNode.put("IBAN", account.getIban());
-        reportNode.put("balance", roundToTwoDecimals(account.getBalance()));
+        reportNode.put("balance", (account.getBalance()));
         reportNode.put("currency", account.getCurrency());
-        reportNode.put("spending limit", roundToTwoDecimals(spendingLimit));
-        reportNode.put("deposit limit", roundToTwoDecimals(depositLimit));
+        reportNode.put("spending limit", (spendingLimit));
+        reportNode.put("deposit limit", (depositLimit));
         reportNode.put("statistics type", command.getType());
 
         // Procesăm raportul în funcție de tip
@@ -1182,8 +1181,8 @@ public final class CommandActions {
             // Creăm un nod JSON pentru asociat
             ObjectNode associateNode = context.getObjectMapper().createObjectNode();
             associateNode.put("username", user.getLastName() + " " + user.getFirstName());
-            associateNode.put("spent", roundToTwoDecimals(spent));
-            associateNode.put("deposited", roundToTwoDecimals(deposited));
+            associateNode.put("spent", spent);
+            associateNode.put("deposited", deposited);
 
             // Adăugăm nodul în array-ul corespunzător pe baza rolului
             if ("manager".equals(role)) {
@@ -1200,8 +1199,8 @@ public final class CommandActions {
         // Adăugăm rezultatele în nodul raportului
         reportNode.set("managers", managersArray);
         reportNode.set("employees", employeesArray);
-        reportNode.put("total spent", roundToTwoDecimals(totalSpent));
-        reportNode.put("total deposited", roundToTwoDecimals(totalDeposited));
+        reportNode.put("total spent", totalSpent);
+        reportNode.put("total deposited", totalDeposited);
     }
 
     /**
@@ -1263,7 +1262,7 @@ public final class CommandActions {
         // Create the principal node for the output
         ObjectNode reportNode = context.getObjectMapper().createObjectNode();
         reportNode.put("IBAN", account.getIban());
-        reportNode.put("balance", roundToTwoDecimals(account.getBalance()));
+        reportNode.put("balance", account.getBalance());
         reportNode.put("currency", account.getCurrency());
 
         // Filter the transactions and add them to the transactions node
@@ -1339,7 +1338,6 @@ public final class CommandActions {
             double rate;
             if (account.getType().equals("savings")) {
                 rate = account.getInterestRate() * account.getBalance();
-                rate = roundToTwoDecimals(rate);
                 System.out.println("rate: " + rate);
                 account.addFunds(rate);
                 System.out.println("Interest added to account " + account.getIban() + " " + account.getBalance() + " " + account.getCurrency());
@@ -1559,8 +1557,6 @@ public final class CommandActions {
         try {
             convertedFee = context.getCurrencyConverter().convertCurrency(fee,
                     "RON", account.getCurrency());
-            // Round the converted fee to two decimals
-            convertedFee = roundToTwoDecimals(convertedFee);
         } catch (CurrencyConversionException e) {
             addError(context.getOutput(), e.getMessage(),
                     command.getTimestamp(), "upgradePlan");
@@ -1595,17 +1591,6 @@ public final class CommandActions {
                 .build();
         user.addTransaction(transaction);
         System.out.println("Balance after upgrade is: " + account.getBalance());
-    }
-
-    /**
-     * Round a double value to two decimals.
-     * @param value the value to be rounded
-     * @return the rounded value
-     */
-    public static double roundToTwoDecimals(double value) {
-        return BigDecimal.valueOf(value)
-                .setScale(2, RoundingMode.HALF_UP)
-                .doubleValue();
     }
 
     public void cashWithdrawal(final CommandInput command, final CommandContext context) throws UserNotFoundException,

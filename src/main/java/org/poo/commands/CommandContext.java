@@ -4,11 +4,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.Getter;
+import org.poo.models.SplitPayment;
 import org.poo.models.User;
 import org.poo.services.Commerciant;
 import org.poo.services.CurrencyConverter;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Getter
 /**
@@ -24,6 +27,7 @@ public class CommandContext {
     private final ObjectMapper objectMapper;
     private final ArrayNode output;
     private final CurrencyConverter currencyConverter;
+    private static final Map<String, Map<SplitPayment, Boolean>> globalResponses = new HashMap<>();
 
     public CommandContext(final List<User> users,
                           final List<Commerciant> commerciants,

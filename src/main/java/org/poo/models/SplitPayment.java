@@ -14,6 +14,9 @@ import static org.poo.commands.CommandActions.addError;
 
 @Data
 public class SplitPayment {
+    private static List<String> acceptedResponsesCustom = new ArrayList<>();
+    private static List<String> acceptedResponsesEqual = new ArrayList<>();
+
     private final String splitPaymentType;
     private final List<String> accounts;
     private final List<Double> amountsForUsers;
@@ -21,6 +24,7 @@ public class SplitPayment {
     private final double amount;
     private final int timestamp;
     private final Map<String, Boolean> responses = new HashMap<>();
+//    private static Map<String, Boolean> responses = new HashMap<>();
     private boolean isCompleted = false;
     private final Map<String, String> emailToAccount;
     private final Map<String, Double> accountBalances;
@@ -41,79 +45,155 @@ public class SplitPayment {
         for (String account : accounts) {
             responses.put(account, null);
         }
+//        for (String account : accounts) {
+//            responses.putIfAbsent(account, null); // Only if the key is not already present
+//        }
         this.emailToAccount = emailToAccount;
         this.accountBalances = accountBalances;
     }
 
+    public List<String> getAcceptedResponsesForType(String splitPaymentType) {
+        if (splitPaymentType.equals("custom")) {
+            return acceptedResponsesCustom;
+        } else {
+            return acceptedResponsesEqual;
+        }
+    }
     /**
      * Method to process the response of a user
      * @param account The iban of the user
      * @param isAccepted  Whether the user accepted the payment
-     * @param accountBalances The balances of the accounts
+     * @param splitPaymentType The type of the split payment
      * @return a string with the result of the payment
      */
-    public String processResponse(String account, boolean isAccepted, Map<String, Double> accountBalances, final CommandContext context) {
-        if (!responses.containsKey(account)) {
+//    public String processResponse(String account, boolean isAccepted, String splitPaymentType, final CommandContext context) {
+//        if (!accounts.contains(account)) {
+//            return "One of the accounts is invalid.";
+//        }
+//
+//        List<String> acceptedResponses = getAcceptedResponsesForType(splitPaymentType);
+//
+//        if (acceptedResponses.contains(account)) {
+//            return "The account has already responded.";
+//        }
+//
+//        // Update the response
+//        if (isAccepted) {
+//            acceptedResponses.add(account);
+//        } else {
+//            // If one user rejected the payment, the payment is cancelled
+//            isCompleted = true;
+//            System.out.println("One user rejected the payment.");
+//            rejectPayment(context);
+//            return "One user rejected the payment.";
+//        }
+//
+//        // Print all accounts and their responses
+//        System.out.println("Current accepted responses for type " + splitPaymentType + ":");
+//        acceptedResponses.forEach(acc -> System.out.println("Account: " + acc));
+//
+//        // Check if all users have responded
+//        long acceptedCount = accounts.stream()
+//                .filter(acceptedResponses::contains)
+//                .count();
+//
+//        if (acceptedCount >= accounts.size()) {
+//            processSplitPayment(context);
+//            return "Split payment of " + amount + " " + currency + " completed successfully.";
+//        }
+//
+//        // Return null if the payment is not completed
+//        System.out.println("Payment not completed yet at account: " + account);
+//        return null;
+//    }
+    public String processResponse(String account, boolean isAccepted, String splitPaymentType, final CommandContext context) {
+        if (!accounts.contains(account)) {
             return "One of the accounts is invalid.";
         }
 
-        if (responses.get(account) != null) {
-            return "The account has already responded.";
+        if (GlobalResponseTracker.hasResponded(account, this)) {
+            System.out.println("The account has already responded.");
         }
 
-        System.out.println(responses.containsKey(account));
-        // Update the response
-        responses.put(account, isAccepted);
+        // Actualizarea răspunsului global
+        GlobalResponseTracker.addResponse(account, this, isAccepted);
 
-        // If one user rejected the payment, the payment is cancelled
+        // Dacă un utilizator respinge plata, se anulează
         if (!isAccepted) {
             isCompleted = true;
-            System.out.println("One user rejected the payment.");
             rejectPayment(context);
             return "One user rejected the payment.";
         }
 
         // Print all accounts and their responses
         System.out.println("Current responses status:");
-        responses.forEach((acc, response) -> {
+        GlobalResponseTracker.getResponsesForPayment(this).forEach((acc, response) -> {
             System.out.println("Account: " + acc + ", Response: " + response);
         });
 
-        // Check if all users have responded
-        if (responses.values().stream().allMatch(response -> response != null && response)) {
+        System.out.println("The accounts that make part of this payment: ");
+        accounts.forEach(acc -> System.out.println("Account: " + acc));
+
+        // Verificarea dacă toți utilizatorii au acceptat
+        boolean allAccepted = accounts.stream()
+                .allMatch(acc -> Boolean.TRUE.equals(GlobalResponseTracker.getResponse(acc, this)));
+
+        if (allAccepted) {
             processSplitPayment(context);
+            // GlobalResponseTracker.removeResponsesForPayment(this);
             return "Split payment of " + amount + " " + currency + " completed successfully.";
-            // return completePayment(accountBalances);
         }
 
-        // Return null if the payment is not completed
         System.out.println("Payment not completed yet at account: " + account);
         return null;
     }
 
-//    // Make the payment
-//    private String completePayment(Map<String, Double> accountBalances) {
-//        for (int i = 0; i < accounts.size(); i++) {
-//            String account = accounts.get(i);
-//            double requiredAmount = amountsForUsers.get(i);
-//
-//            // Check if the account has enough funds
-//            if (accountBalances.getOrDefault(account, 0.0) < requiredAmount) {
-//                isCompleted = true;
-//                return "Account " + account + " has insufficient funds for a split payment.";
-//            }
+
+//    public String processResponse(String account, boolean isAccepted, String splitPaymentType, final CommandContext context) {
+//        if (!responses.containsKey(account)) {
+//            return "One of the accounts is invalid.";
 //        }
 //
-//        // Update the balances
-//        for (int i = 0; i < accounts.size(); i++) {
-//            String account = accounts.get(i);
-//            double requiredAmount = amountsForUsers.get(i);
-//            accountBalances.put(account, accountBalances.get(account) - requiredAmount);
+//        if (responses.get(account) != null) {
+//            return "The account has already responded.";
 //        }
 //
-//        isCompleted = true;
-//        return "Split payment of " + amount + " " + currency + " completed successfully.";
+//        System.out.println(responses.containsKey(account));
+//        // Update the response
+//        responses.put(account, isAccepted);
+//
+//        // If one user rejected the payment, the payment is cancelled
+//        if (!isAccepted) {
+//            isCompleted = true;
+//            System.out.println("One user rejected the payment.");
+//            rejectPayment(context);
+//            return "One user rejected the payment.";
+//        }
+//
+//        // Print all accounts and their responses
+//        System.out.println("Current responses status:");
+//        responses.forEach((acc, response) -> {
+//            System.out.println("Account: " + acc + ", Response: " + response);
+//        });
+//
+//        // Check if all users have responded
+//        if (responses.values().stream().allMatch(response -> response != null && response)) {
+//            processSplitPayment(context);
+//            return "Split payment of " + amount + " " + currency + " completed successfully.";
+//        }
+////        boolean allAccepted = accounts.stream()
+////                .allMatch(acc -> Boolean.TRUE.equals(responses.get(acc)));
+////
+////        if (allAccepted) {
+////            processSplitPayment(context);
+////            return "Split payment of " + amount + " " + currency + " completed successfully.";
+////        }
+//
+//        // Return null if the payment is not completed
+//        System.out.println("Payment not completed yet at account: " + account);
+//        return null;
 //    }
+
 
     private void rejectPayment(final CommandContext context) {
         System.out.println("Reject split payment at " + timestamp);
@@ -148,7 +228,7 @@ public class SplitPayment {
                     account.getIban(), "error")
                     .error("One user rejected the payment.")
                     .splitPaymentType(splitPaymentType)
-                    .amount(CommandActions.roundToTwoDecimals(amountForUser))
+                    .amount(amountForUser)
                     .amounts(amountsForUsers)
                     .amountCurrency(currency)
                     .involvedAccounts(accounts)
@@ -228,7 +308,7 @@ public class SplitPayment {
                             .error("Account " + firstInvalidIban
                                     + " has insufficient funds for a split payment.")
                             .splitPaymentType(splitPaymentType)
-                            .amount(CommandActions.roundToTwoDecimals(amountForUser))
+                            .amount(amountForUser)
                             .amounts(amountsForUsers)
                             .amountCurrency(currency)
                             .involvedAccounts(accounts)
@@ -284,7 +364,7 @@ public class SplitPayment {
                     account.getIban(), "spending")
                     .error(null)
                     .splitPaymentType(splitPaymentType)
-                    .amount(CommandActions.roundToTwoDecimals(amountForUser))
+                    .amount(amountForUser)
                     .amounts(amountsForUsers)
                     .amountCurrency(currency)
                     .involvedAccounts(accounts)
