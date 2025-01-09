@@ -8,7 +8,12 @@ import org.poo.models.Transaction;
  * but this transaction is not printed in the JSON file.
  */
 public class AddFundsHandler implements TransactionHandler {
-
+    /**
+     * Handles the logic for a "addFunds" transaction.
+     * This transaction is not printed in the JSON file.
+     * @param transaction the transaction to be handled
+     * @param transactionJson the JSON object to be printed
+     */
     @Override
     public void handleTransaction(final Transaction transaction, final ObjectNode transactionJson) {
         transactionJson.put("amount", transaction.getAmount());
