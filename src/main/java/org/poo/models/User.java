@@ -30,6 +30,8 @@ public class User {
     private double totalSpending;
     private String role;
     private Account ownerAccount;
+    // Count the number of payments for the silver plan (for the automatically upgrade)
+    private double countSilverPayments;
 
     public User(final String firstName, final String lastName, final String email
             , final String birthDate, final String occupation) {
@@ -45,6 +47,7 @@ public class User {
         totalSpending = 0;
         ownerAccount = null;
         role = "user";
+        countSilverPayments = 0;
     }
 
     /**

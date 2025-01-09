@@ -489,6 +489,7 @@ public final class CommandActions {
                 cardUser.setStatus("active");
                 System.out.println("S-A EFECTUAT TRANZACTIA CU SUCCES account balance " + accountUser.getIban() + " plata online: " + accountUser.getBalance() + " " + accountUser.getCurrency());
                 accountUser.setBalance((accountUser.getBalance()));
+
                 Transaction transaction = new Transaction.TransactionBuilder(timestamp,
                         "Card payment", accountUser.getIban(), "spending")
                         .amount((amountInAccountCurrency))
@@ -497,6 +498,22 @@ public final class CommandActions {
                         .build();
                 user.addTransaction(transaction);
 
+                if (amountInRON > 300 && user.getCurrentPlan().getPlanType().equals("silver")) {
+                    System.out.println("Userul are plan " + user.getCurrentPlan().getPlanType()
+                            + " si a efectuat o plata mai mare de 300 RON");
+                    user.setCountSilverPayments(user.getCountSilverPayments() + 1);
+                }
+
+                if (user.getCountSilverPayments() >= 5) {
+                    System.out.println("Userul a efectuat 5 plati mai mari de 300 RON si i se va upgrada planul");
+                    user.setCurrentPlan(new GoldPlan());
+                    user.setCountSilverPayments(0);
+                    Transaction upgradeTransaction = new Transaction.TransactionBuilder(command.getTimestamp(),
+                            "Upgrade plan", accountUser.getIban(), "upgrade")
+                            .currentPlan(user.getCurrentPlan().getPlanType())
+                            .build();
+                    user.addTransaction(upgradeTransaction);
+                }
                 // If the card is the type of "one time pay",
                 // it is destroyed after the payment and a new card is created
                 if (cardUser.getType().equals("one time pay")) {
@@ -686,6 +703,23 @@ public final class CommandActions {
                 .transferType("received")
                 .build();
         receiverUser.addTransaction(receiverTransaction);
+
+        if (amountInRON > 300 && senderUser.getCurrentPlan().getPlanType().equals("silver")) {
+            System.out.println("Userul are plan " + senderUser.getCurrentPlan().getPlanType()
+                    + " si a efectuat o plata mai mare de 300 RON");
+            senderUser.setCountSilverPayments(senderUser.getCountSilverPayments() + 1);
+        }
+
+        if (senderUser.getCountSilverPayments() >= 5) {
+            System.out.println("Userul a efectuat 5 plati mai mari de 300 RON si i se va upgrada planul");
+            senderUser.setCurrentPlan(new GoldPlan());
+            senderUser.setCountSilverPayments(0);
+            Transaction upgradeTransaction = new Transaction.TransactionBuilder(command.getTimestamp(),
+                    "Upgrade plan", senderAccount.getIban(), "upgrade")
+                    .currentPlan(senderUser.getCurrentPlan().getPlanType())
+                    .build();
+            senderUser.addTransaction(upgradeTransaction);
+        }
     }
 
     private void sendMoneyCommerciant(final CommandInput command,
