@@ -2,16 +2,23 @@ package org.poo.services;
 
 import org.poo.commands.CommandContext;
 import org.poo.exceptions.CurrencyConversionException;
-import org.poo.models.Transaction;
 import org.poo.models.User;
 
-/**
- * This strategy offers cashback based on spending thresholds.
- */
+
 public class SpendingThresholdCashback implements CashbackStrategy {
+    /**
+     * Implements cashback calculation based on total spending thresholds.
+     *
+     * Cashback rates vary based on the user's subscription plan and spending amount:
+     * - Spending >= 500 RON: Higher rates for Gold and Silver plans.
+     * - Spending >= 300 RON: Medium rates for all plans.
+     * - Spending >= 100 RON: Low rates for all plans.
+     */
     @Override
-    public double calculateCashback(User user, Commerciant commerciant, String accountCurrency,
-                                    double spendingAmount, CommandContext context) throws CurrencyConversionException {
+    public double calculateCashback(final User user, final Commerciant commerciant,
+                                    final String accountCurrency, final double spendingAmount,
+                                    final CommandContext context)
+                                    throws CurrencyConversionException {
         System.out.println("calculateCashback for SpendingThresholdCashback");
         double amountInRON = 0;
         try {
@@ -22,7 +29,6 @@ public class SpendingThresholdCashback implements CashbackStrategy {
         }
 
         double totalSpending = amountInRON + user.getTotalSpending(commerciant, context);
-        // double totalSpending = user.getTotalSpending();
         System.out.println("Total spending: " + totalSpending + " RON");
 
         double cashbackRate = 0;

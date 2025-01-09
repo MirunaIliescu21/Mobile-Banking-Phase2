@@ -121,16 +121,10 @@ public final class Main {
             }
         }
 
-        System.out.println("List of commerciants:");
-        for (Commerciant commerciant : commerciants) {
-            System.out.println(commerciant);
-        }
-
         // Initialize CommandExecutor with context
         CommandExecutor commandExecutor = new CommandExecutor(users, commerciants,
                                                               objectMapper, output,
                                                               currencyConverter);
-
         // Execute each command
         for (CommandInput command : inputData.getCommands()) {
             try {

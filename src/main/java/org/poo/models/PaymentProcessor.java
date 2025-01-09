@@ -34,7 +34,6 @@ public class PaymentProcessor {
                 System.out.println("Procesarea nu este pentru acest tip de comanda");
                 continue;
             }
-            // command.getEmailToAccount().forEach((key, value) -> System.out.println("Email: " + key + ", Account: " + value));
 
             String iban = command.getEmailToAccount().get(email);
             if (iban == null) {

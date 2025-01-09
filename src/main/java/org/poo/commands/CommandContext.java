@@ -2,16 +2,12 @@ package org.poo.commands;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.Getter;
-import org.poo.models.SplitPayment;
 import org.poo.models.User;
 import org.poo.services.Commerciant;
 import org.poo.services.CurrencyConverter;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 @Getter
 /**
@@ -20,6 +16,7 @@ import java.util.Map;
  * - ObjectMapper for JSON serialization
  * - ArrayNode for output
  * - CurrencyConverter for currency conversion
+ *  - List of commerciants (added in the second part of the project)
  */
 public class CommandContext {
     private final List<User> users;
@@ -27,7 +24,6 @@ public class CommandContext {
     private final ObjectMapper objectMapper;
     private final ArrayNode output;
     private final CurrencyConverter currencyConverter;
-    private static final Map<String, Map<SplitPayment, Boolean>> globalResponses = new HashMap<>();
 
     public CommandContext(final List<User> users,
                           final List<Commerciant> commerciants,
@@ -41,6 +37,11 @@ public class CommandContext {
         this.currencyConverter = currencyConverter;
     }
 
+    /**
+     * Find a cmmerciant by name
+     * @param name Name of the user
+     * @return User with the given name
+     */
     public Commerciant findCommerciantByName(String name) {
         for (Commerciant commerciant : commerciants) {
             if (commerciant.getName().equalsIgnoreCase(name)) {
@@ -50,6 +51,11 @@ public class CommandContext {
         throw new IllegalArgumentException("Commerciant with name " + name + " not found");
     }
 
+    /**
+     * Find a commerciant by IBAN
+     * @param iban IBAN of the commerciant
+     * @return Commerciant with the given IBAN or null if not found
+     */
     public Commerciant findCommerciantByIban(String iban) {
         for (Commerciant commerciant : commerciants) {
             if (commerciant.getAccount().equalsIgnoreCase(iban)) {
@@ -57,13 +63,5 @@ public class CommandContext {
             }
         }
         return null;
-        // throw new IllegalArgumentException("Commerciant with iban " + iban + " not found");
     }
-
-    public void addOutputMessage(String message, CommandContext context) {
-        ObjectNode outputNode = context.getObjectMapper().createObjectNode();
-        outputNode.put("message", message);
-        context.getOutput().add(outputNode);
-    }
-
 }
