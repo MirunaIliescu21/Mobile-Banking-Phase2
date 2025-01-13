@@ -10,7 +10,6 @@ import org.poo.models.Transaction;
 import org.poo.models.User;
 import org.poo.services.CashbackStrategy;
 import org.poo.services.Commerciant;
-import org.poo.services.GoldPlan;
 
 import static org.poo.commands.CommandErrors.addError;
 import static org.poo.models.User.findUserByEmail;
@@ -40,7 +39,8 @@ public class SendMoneyCommand implements Command {
         try {
 
             System.out.println("sendMoney " + command.getTimestamp());
-            if (senderAccount == null  && User.findAccountByAlias(context.getUsers(), senderIBAN) != null ) {
+            if (senderAccount == null
+                    && User.findAccountByAlias(context.getUsers(), senderIBAN) != null) {
                 senderAccount = User.findAccountByAlias(context.getUsers(), senderIBAN);
             }
             if (senderAccount == null) {
@@ -82,6 +82,19 @@ public class SendMoneyCommand implements Command {
         }
     }
 
+    /**
+     * Make the actual transaction to a commerciant
+     * @param senderAccount the sender account
+     * @param receiverAccount the commerciant account
+     * @param senderUser the sender user
+     * @param receiverUser
+     * @param senderIBAN
+     * @param receiverIBAN
+     * @param amount
+     * @param command
+     * @param context
+     * @throws InsufficientFundsException
+     */
     private void makeTransaction(final Account senderAccount, final Account receiverAccount,
                                  final User senderUser, final User receiverUser,
                                  final String senderIBAN, final String receiverIBAN,
@@ -98,15 +111,18 @@ public class SendMoneyCommand implements Command {
         String senderCurrency = senderAccount.getCurrency();
         String receiverCurrency = receiverAccount.getCurrency();
         System.out.println("Before transaction");
-        System.out.println("senderAccount balance: " + senderAccount.getBalance() + " " + senderCurrency);
-        System.out.println("receiverAccount balance: " + receiverAccount.getBalance() + " " + receiverCurrency);
+        System.out.println("senderAccount balance: "
+                + senderAccount.getBalance() + " " + senderCurrency);
+        System.out.println("receiverAccount balance: "
+                + receiverAccount.getBalance() + " " + receiverCurrency);
 
         double convertedAmount;
         double amountInRON;
         try {
             convertedAmount = context.getCurrencyConverter().convertCurrency(amount,
                     senderCurrency, receiverCurrency);
-            amountInRON = context.getCurrencyConverter().convertCurrency(amount, senderCurrency, "RON");
+            amountInRON = context.getCurrencyConverter()
+                    .convertCurrency(amount, senderCurrency, "RON");
             System.out.println("amount: " + amount + " " + senderCurrency);
             System.out.println("convertedAmount: " + convertedAmount + " " + receiverCurrency);
         } catch (CurrencyConversionException e) {
@@ -137,8 +153,10 @@ public class SendMoneyCommand implements Command {
         // Make the actual transaction
         senderAccount.setBalance((senderAccount.getBalance() - finalAmount));
         receiverAccount.setBalance((receiverAccount.getBalance() + convertedAmount));
-        System.out.println("senderAccount balance: " + senderAccount.getBalance() + " " + senderCurrency);
-        System.out.println("receiverAccount balance: " + receiverAccount.getBalance() + " " + receiverCurrency);
+        System.out.println("senderAccount balance: "
+                + senderAccount.getBalance() + " " + senderCurrency);
+        System.out.println("receiverAccount balance: "
+                + receiverAccount.getBalance() + " " + receiverCurrency);
 
         // Add the transaction to the sender's account
         Transaction senderTransaction = new Transaction.TransactionBuilder(command.getTimestamp(),
@@ -162,22 +180,7 @@ public class SendMoneyCommand implements Command {
                 .build();
         receiverUser.addTransaction(receiverTransaction);
 
-        if (amountInRON > 300 && senderUser.getCurrentPlan().getPlanType().equals("silver")) {
-            System.out.println("Userul are plan " + senderUser.getCurrentPlan().getPlanType()
-                    + " si a efectuat o plata mai mare de 300 RON");
-            senderUser.setCountSilverPayments(senderUser.getCountSilverPayments() + 1);
-        }
-
-        if (senderUser.getCountSilverPayments() >= 5) {
-            System.out.println("Userul a efectuat 5 plati mai mari de 300 RON si i se va upgrada planul");
-            senderUser.setCurrentPlan(new GoldPlan());
-            senderUser.setCountSilverPayments(0);
-            Transaction upgradeTransaction = new Transaction.TransactionBuilder(command.getTimestamp(),
-                    "Upgrade plan", senderAccount.getIban(), "upgrade")
-                    .currentPlan(senderUser.getCurrentPlan().getPlanType())
-                    .build();
-            senderUser.addTransaction(upgradeTransaction);
-        }
+        PayOnlineCommand.countSilverPayments(amountInRON, senderUser, senderAccount, command);
     }
 
     private void sendMoneyCommerciant(final CommandInput command,
@@ -197,7 +200,8 @@ public class SendMoneyCommand implements Command {
             throw new UserNotFoundException("Sender not found.");
         }
         System.out.println("sendMoneyCommerciant " + command.getTimestamp());
-        System.out.println("senderAccount balance: " + senderAccount.getBalance() + " " + senderAccount.getCurrency());
+        System.out.println("senderAccount balance: " + senderAccount.getBalance()
+                            + " " + senderAccount.getCurrency());
 
         double amountInRON = context.getCurrencyConverter()
                 .convertCurrency(command.getAmount(), senderAccount.getCurrency(), "RON");
@@ -209,8 +213,9 @@ public class SendMoneyCommand implements Command {
         System.out.println("commission: " + commission);
 
         CashbackStrategy cashbackStrategy = receiverCommerciant.getCashbackStrategyInstance();
+        String cashbackType = receiverCommerciant.getCashbackStrategy();
         double cashback = cashbackStrategy.calculateCashback(senderUser, receiverCommerciant,
-                senderAccount.getCurrency(), amount, context);
+                senderAccount, amount, context);
         System.out.println("cashback: " + cashback);
 
         double finalAmount = amount + commission - cashback;
@@ -223,6 +228,9 @@ public class SendMoneyCommand implements Command {
         }
 
         senderAccount.setBalance(newBalance);
+        if (cashbackType.equals("spendingThreshold")) {
+            senderAccount.setSpendingThreshold(senderAccount.getSpendingThreshold() + amountInRON);
+        }
         Transaction senderTransaction = new Transaction.TransactionBuilder(command.getTimestamp(),
                 command.getDescription(), senderAccount.getIban(), "spending")
                 .senderIBAN(senderIBAN)

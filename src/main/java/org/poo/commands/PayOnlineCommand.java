@@ -1,6 +1,11 @@
 package org.poo.commands;
 
-import org.poo.exceptions.*;
+import org.poo.exceptions.CardNotFoundException;
+import org.poo.exceptions.CurrencyConversionException;
+import org.poo.exceptions.InsufficientFundsException;
+import org.poo.exceptions.UnauthorizedCardAccessException;
+import org.poo.exceptions.UserNotFoundException;
+import org.poo.exceptions.UnauthorizedCardStatusException;
 import org.poo.fileio.CommandInput;
 import org.poo.models.Account;
 import org.poo.models.Card;
@@ -15,6 +20,8 @@ import static org.poo.commands.CommandErrors.addError;
 import static org.poo.models.User.findUserByEmail;
 
 public class PayOnlineCommand implements Command {
+    private static final int SILVER_PAYMENTS_LIMIT = 5;
+    private static final int SPENDING_LIMIT_FOR_SILVER = 300;
     /**
      * Pay online with a specific card.
      * Add an error to the output if the user or the card is not found, or if the user
@@ -36,32 +43,25 @@ public class PayOnlineCommand implements Command {
     @Override
     public void execute(final CommandInput command,
                           final CommandContext context) throws UserNotFoundException,
-            CardNotFoundException,
-            UnauthorizedCardAccessException,
-            InsufficientFundsException,
-            UnauthorizedCardStatusException {
+            CardNotFoundException, UnauthorizedCardAccessException,
+            InsufficientFundsException, UnauthorizedCardStatusException {
         System.out.println("payOnline " + command.getTimestamp());
 
         if (command.getAmount() <= 0) {
-            System.out.println("Invalid amount");
             return;
         }
         String email = command.getEmail();
         String cardNumber = command.getCardNumber();
         int timestamp = command.getTimestamp();
-
         User user = findUserByEmail(context.getUsers(), email);
         Card cardUser = null;
         Account accountUser = null;
 
-
         try {
-            // Check if the user exists
             if (user == null) {
                 throw new UserNotFoundException("User not found");
             }
             System.out.println("Userul este: " + user.getRole());
-
             Account ownerAccount = user.getOwnerAccount();
 
             // Search for the card in each account of the user
@@ -72,19 +72,17 @@ public class PayOnlineCommand implements Command {
                     break;
                 }
             }
-
-            if (cardUser == null && (!user.getRole().equals("owner") && !user.getRole().equals("user"))) {
+            // Search for the card in each account of the user
+            if (cardUser == null
+                    && (!user.getRole().equals("owner") && !user.getRole().equals("user"))) {
                 System.out.println("Caut printe cardurile ownerului");
                 if (ownerAccount.findCardByNumber(cardNumber) != null) {
-                    System.out.println("Cardul a fost gasit printre cardurile ownerului");
                     cardUser = ownerAccount.findCardByNumber(cardNumber);
                     accountUser = ownerAccount;
                 }
             }
-
             // If the card was not found, add an error to the output
             if (cardUser == null) {
-                System.out.println("Card not found");
                 throw new CardNotFoundException("Card not found");
             }
 
@@ -92,42 +90,37 @@ public class PayOnlineCommand implements Command {
                     convertCurrency(command.getAmount(), command.getCurrency(), "RON");
             System.out.println("amountInRON: " + amountInRON + " RON");
 
-            if (user.getRole().equals("employee") && amountInRON > ownerAccount.getSpendingLimit()) {
-                System.out.println("userul este employee si nu are dreptul sa cheltuie atatia bani");
+            if (user.getRole().equals("employee")
+                    && amountInRON > ownerAccount.getSpendingLimit()) {
+                System.out.println("Userul este employee si nu poate sa cheltuie atatia bani");
                 return;
             }
-
             // Check if the user owns the card
             if (!accountUser.getOwner().equals(email) && user.getRole().equals("owner")) {
                 throw new UnauthorizedCardAccessException("User does not own the card");
             }
-
             // Convert the amount to the account currency
-            double amountInAccountCurrency;
-            amountInAccountCurrency = context.getCurrencyConverter().
-                    convertCurrency(command.getAmount(),
-                            command.getCurrency(),
-                            accountUser.getCurrency());
-            System.out.println("amountInAccountCurrency: " + amountInAccountCurrency + " " + accountUser.getCurrency());
-
-
+            double amountInAccountCurrency = context.getCurrencyConverter()
+                                            .convertCurrency(command.getAmount(),
+                                            command.getCurrency(), accountUser.getCurrency());
+            System.out.println("amountInAccountCurrency: " + amountInAccountCurrency
+                                + " " + accountUser.getCurrency());
             // Calculate commission in RON for the silver plan
             double commissionInRON = user.getCurrentPlan().calculateTransactionFee(amountInRON);
 
-            double commission = context.getCurrencyConverter().
-                    convertCurrency(commissionInRON,
-                            "RON",
-                            accountUser.getCurrency());
+            double commission = context.getCurrencyConverter().convertCurrency(commissionInRON,
+                            "RON", accountUser.getCurrency());
             System.out.println("commission: " + commission);
-
             // Calculate cashback
             Commerciant commerciant = context.findCommerciantByName(command.getCommerciant());
-            System.out.println("commerciant: " + commerciant.getName() + " " + commerciant.getType());
+            System.out.println("commerciant: " + commerciant.getName()
+                                + " " + commerciant.getType());
 
             CashbackStrategy cashbackStrategy = commerciant.getCashbackStrategyInstance();
-            String accountCurrency = accountUser.getCurrency();
-            double cashback = cashbackStrategy.calculateCashback(user, commerciant, accountCurrency, amountInAccountCurrency, context);
-            System.out.println("cashback: " + cashback);
+            String cashbackType = commerciant.getCashbackStrategy();
+            double cashback = cashbackStrategy.calculateCashback(user, commerciant,
+                    accountUser, amountInAccountCurrency, context);
+            System.out.println("cashbacktype: " + cashbackType + " cashback: " + cashback);
 
             // Apply commission and cashback
             double finalAmount = amountInAccountCurrency + commission - cashback;
@@ -138,19 +131,19 @@ public class PayOnlineCommand implements Command {
             if (newBalance < accountUser.getMinimumBalance()) {
                 if (cardUser.getStatus().equals("active")
                         && finalAmount > accountUser.getBalance()) {
-                    System.out.println("Insufficient funds at timestamp " + command.getTimestamp());
+                    System.out.println("Insufficient funds at timestamp "
+                                        + command.getTimestamp());
                     throw new InsufficientFundsException("Insufficient funds");
                 }
             }
-
             // Make the payment
             accountUser.setBalance(accountUser.getBalance() - finalAmount);
-            accountUser.setBalance((accountUser.getBalance()));
             if (cardUser.getStatus().equals("active")
                     && accountUser.getBalance() >= accountUser.getMinimumBalance()) {
                 cardUser.setStatus("active");
-                System.out.println("S-A EFECTUAT TRANZACTIA CU SUCCES account balance " + accountUser.getIban() + " plata online: " + accountUser.getBalance() + " " + accountUser.getCurrency());
-                accountUser.setBalance((accountUser.getBalance()));
+                System.out.println("S-A EFECTUAT TRANZACTIA CU SUCCES account balance "
+                        + accountUser.getIban() + " plata online: "
+                        + accountUser.getBalance() + " " + accountUser.getCurrency());
 
                 Transaction transaction = new Transaction.TransactionBuilder(timestamp,
                         "Card payment", accountUser.getIban(), "spending")
@@ -160,45 +153,19 @@ public class PayOnlineCommand implements Command {
                         .build();
                 user.addTransaction(transaction);
 
-                if (amountInRON > 300 && user.getCurrentPlan().getPlanType().equals("silver")) {
-                    System.out.println("Userul are plan " + user.getCurrentPlan().getPlanType()
-                            + " si a efectuat o plata mai mare de 300 RON");
-                    user.setCountSilverPayments(user.getCountSilverPayments() + 1);
+                // Cashback exists, and it's the type `spendingThreshold`,
+                // the total spending for this account is updated
+                if (cashbackType.equals("spendingThreshold")) {
+                    double oldSpending = accountUser.getSpendingThreshold();
+                    accountUser.setSpendingThreshold(oldSpending + amountInRON);
                 }
 
-                if (user.getCountSilverPayments() >= 5) {
-                    System.out.println("Userul a efectuat 5 plati mai mari de 300 RON si i se va upgrada planul");
-                    user.setCurrentPlan(new GoldPlan());
-                    user.setCountSilverPayments(0);
-                    Transaction upgradeTransaction = new Transaction.TransactionBuilder(command.getTimestamp(),
-                            "Upgrade plan", accountUser.getIban(), "upgrade")
-                            .currentPlan(user.getCurrentPlan().getPlanType())
-                            .build();
-                    user.addTransaction(upgradeTransaction);
-                }
+                countSilverPayments(amountInRON, user, accountUser, command);
+
                 // If the card is the type of "one time pay",
                 // it is destroyed after the payment and a new card is created
                 if (cardUser.getType().equals("one time pay")) {
-                    cardUser.setStatus("destroyed");
-                    accountUser.getCards().remove(cardUser);
-                    Transaction transaction1 = new Transaction.TransactionBuilder(timestamp,
-                            "The card has been destroyed", accountUser.getIban(), "delete")
-                            .card(cardNumber)
-                            .cardHolder(user.getEmail())
-                            .build();
-                    user.addTransaction(transaction1);
-
-                    String newCardNumber = Utils.generateCardNumber();
-                    Card oneTimeCard = new Card(newCardNumber, "active", "one time pay");
-                    accountUser.addCard(oneTimeCard);
-
-                    Transaction transaction2;
-                    transaction2 = new Transaction.TransactionBuilder(command.getTimestamp(),
-                            "New card created", accountUser.getIban(), "delete")
-                            .card(newCardNumber)
-                            .cardHolder(user.getEmail())
-                            .build();
-                    user.addTransaction(transaction2);
+                    deleteAndCreateNewCard(cardUser, user, accountUser, command);
                 }
             } else {
                 // The payment cannot be made, so the amount is returned to the account
@@ -219,6 +186,72 @@ public class PayOnlineCommand implements Command {
             // Add an error to the output if the currency conversion is not supported
             addError(context.getOutput(), "Currency conversion not supported",
                     timestamp, "payOnline");
+        }
+    }
+
+    /**
+     * If the payment is made with a one time card, the card needs to be destroyed (deleted)
+     *  after the payment and create a new one.
+     *  This method delete and create another one time card.
+     * @param cardUser the card of the current user
+     * @param user the user that made the payment
+     * @param accountUser the user's account
+     * @param command the command from input
+     */
+    private static void deleteAndCreateNewCard(final Card cardUser,
+                                               final User user, final Account accountUser,
+                                               final CommandInput command) {
+        int timestamp = command.getTimestamp();
+        String cardNumber =  command.getCardNumber();
+
+        cardUser.setStatus("destroyed");
+        accountUser.getCards().remove(cardUser);
+        Transaction transaction1 = new Transaction.TransactionBuilder(timestamp,
+                "The card has been destroyed", accountUser.getIban(), "delete")
+                .card(cardNumber)
+                .cardHolder(user.getEmail())
+                .build();
+        user.addTransaction(transaction1);
+
+        String newCardNumber = Utils.generateCardNumber();
+        Card oneTimeCard = new Card(newCardNumber, "active", "one time pay");
+        accountUser.addCard(oneTimeCard);
+
+        Transaction transaction2;
+        transaction2 = new Transaction.TransactionBuilder(command.getTimestamp(),
+                "New card created", accountUser.getIban(), "delete")
+                .card(newCardNumber)
+                .cardHolder(user.getEmail())
+                .build();
+        user.addTransaction(transaction2);
+    }
+
+    /**
+     * Check if the user has the silver plan and makes a payment grater than 300 RON.
+     * If the user has minim. 5 payments like this, it will be made
+     * an automatic update to the gold plan
+     * @param amountInRON the amount in RON to compare with 300 ron
+     * @param user the user that makes the payment
+     * @param accountUser the account
+     * @param command the command from the input
+     */
+    public static void countSilverPayments(final double amountInRON, final User user,
+                                            final Account accountUser, final CommandInput command) {
+        if (amountInRON > SPENDING_LIMIT_FOR_SILVER
+                && user.getCurrentPlan().getPlanType().equals("silver")) {
+            user.setCountSilverPayments(user.getCountSilverPayments() + 1);
+        }
+
+        if (user.getCountSilverPayments() >= SILVER_PAYMENTS_LIMIT) {
+            System.out.println("Userul a efectuat 5 plati > 300 RON + upgrade automant");
+            user.setCurrentPlan(new GoldPlan());
+            user.setCountSilverPayments(0);
+            Transaction upgradeTransaction = new Transaction
+                    .TransactionBuilder(command.getTimestamp(),
+                    "Upgrade plan", accountUser.getIban(), "upgrade")
+                    .currentPlan(user.getCurrentPlan().getPlanType())
+                    .build();
+            user.addTransaction(upgradeTransaction);
         }
     }
 }

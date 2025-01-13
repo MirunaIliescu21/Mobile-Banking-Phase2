@@ -1,9 +1,16 @@
 package org.poo.services;
 
 import org.poo.commands.CommandContext;
+import org.poo.models.Account;
 import org.poo.models.User;
 
 public class NrOfTransactionsCashback implements CashbackStrategy {
+    private static final double CASHBACK_RATE_FOOD = 0.02;
+    private static final double CASHBACK_RATE_CLOTHES = 0.05;
+    private static final double CASHBACK_RATE_TECH = 0.10;
+    private static final int TRANSACTION_LIMIT_FOOD = 3;
+    private static final int TRANSACTION_LIMIT_CLOTHES = 5;
+    private static final int TRANSACTION_LIMIT_TECH = 11;
     /**
      * Implements cashback calculation based on the number of transactions with a merchant.
      *
@@ -15,12 +22,11 @@ public class NrOfTransactionsCashback implements CashbackStrategy {
      */
     @Override
     public double calculateCashback(final User user, final Commerciant commerciant,
-                                    final String accountCurrency, final double spendingAmount,
+                                    final Account account,
+                                    final double spendingAmount,
                                     final CommandContext context) {
-
-        int transactionCount = user.getTransactionCountByCommerciant(commerciant, user.getTransactions());
-        System.out.println("Transaction count for " + commerciant.getName() + ": " + transactionCount);
-
+        int transactionCount = user.getTransactionCountByCommerciant(commerciant,
+                                                                     user.getTransactions());
         // Check if the user has already received cashback for the given category
         boolean hasReceivedFoodCashback = user.hasReceivedCashback("Food");
         boolean hasReceivedClothesCashback = user.hasReceivedCashback("Clothes");
@@ -28,17 +34,19 @@ public class NrOfTransactionsCashback implements CashbackStrategy {
 
         double cashbackRate = 0;
 
-        if (transactionCount >= 3 && commerciant.getType().equals("Food")
+        if (transactionCount >= TRANSACTION_LIMIT_FOOD && commerciant.getType().equals("Food")
                 && !hasReceivedFoodCashback) {
-            cashbackRate = 0.02;
+            cashbackRate = CASHBACK_RATE_FOOD;
             user.setCashbackReceived("Food");
-        } else if (transactionCount >= 5 && commerciant.getType().equals("Clothes")
+        } else if (transactionCount >= TRANSACTION_LIMIT_CLOTHES
+                && commerciant.getType().equals("Clothes")
                     && !hasReceivedClothesCashback) {
-            cashbackRate = 0.05;
+            cashbackRate = CASHBACK_RATE_CLOTHES;
             user.setCashbackReceived("Clothes");
-        } else if (transactionCount >= 11 && commerciant.getType().equals("Tech")
+        } else if (transactionCount >= TRANSACTION_LIMIT_TECH
+                && commerciant.getType().equals("Tech")
                     && !hasReceivedTechCashback) {
-            cashbackRate = 0.10;
+            cashbackRate = CASHBACK_RATE_TECH;
             user.setCashbackReceived("Tech");
         }
 

@@ -2,6 +2,7 @@ package org.poo.services;
 
 import org.poo.commands.CommandContext;
 import org.poo.exceptions.CurrencyConversionException;
+import org.poo.models.Account;
 import org.poo.models.User;
 
 /**
@@ -15,13 +16,13 @@ public interface CashbackStrategy {
      *
      * @param user The user making the transaction.
      * @param commerciant The merchant associated with the transaction.
-     * @param accountCurrency The currency of the user's account.
+     * @param account The user's account for this transaction.
      * @param totalSpending The total spending amount of the user.
      * @param context The command context providing system utilities (e.g., currency conversion).
      * @return The calculated cashback amount.
      * @throws CurrencyConversionException If currency conversion fails.
      */
-    double calculateCashback(final User user, final Commerciant commerciant,
-                             final String accountCurrency, final double totalSpending,
-                             final CommandContext context) throws CurrencyConversionException;
+    double calculateCashback(User user, Commerciant commerciant,
+                             Account account, double totalSpending,
+                             CommandContext context) throws CurrencyConversionException;
 }

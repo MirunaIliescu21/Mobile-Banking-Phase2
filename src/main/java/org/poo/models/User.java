@@ -6,11 +6,19 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.Data;
 import org.poo.commands.CommandContext;
 import org.poo.exceptions.CurrencyConversionException;
-import org.poo.services.*;
+import org.poo.services.ServicePlan;
+import org.poo.services.StandardPlan;
+import org.poo.services.StudentPlan;
+import org.poo.services.Commerciant;
 
 import java.time.LocalDate;
 import java.time.Period;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.Comparator;
+import java.util.Map;
 
 @Data
 /**
@@ -27,14 +35,14 @@ public class User {
     private final String occupation;
     private ServicePlan currentPlan;
     private Set<String> receivedCashbacks = new HashSet<>(); // Ex. "Food", "Clothes", "Tech"
-    private double totalSpending;
     private String role;
     private Account ownerAccount;
     // Count the number of payments for the silver plan (for the automatically upgrade)
     private double countSilverPayments;
+    private double totalSpendingThreshold; // in RON
 
-    public User(final String firstName, final String lastName, final String email
-            , final String birthDate, final String occupation) {
+    public User(final String firstName, final String lastName, final String email,
+                final String birthDate, final String occupation) {
         this.firstName = firstName;
         this.lastName = lastName;
         this.email = email;
@@ -44,7 +52,7 @@ public class User {
         this.occupation = occupation;
         // Set the default plan based on the occupation
         currentPlan = occupation.equals("student") ? new StudentPlan() : new StandardPlan();
-        totalSpending = 0;
+        totalSpendingThreshold = 0;
         ownerAccount = null;
         role = "user";
         countSilverPayments = 0;
@@ -161,6 +169,7 @@ public class User {
 
     /**
      * Print all the transactions of the user.
+     * Using the class Comparator for sorting efficiently the transactions by their timestamp
      * @param transactionsArray the array of transactions
      * @param output the output array
      */
@@ -215,7 +224,8 @@ public class User {
             return "upgradePlan";
         } else if (transaction.getDescription().equalsIgnoreCase("Savings withdrawal")) {
             return "withdrawalSavings";
-        } else if (transaction.getAmount() != 0 && transaction.getError().equalsIgnoreCase("Cash withdrawal")) {
+        } else if (transaction.getAmount() != 0
+                && transaction.getError().equalsIgnoreCase("Cash withdrawal")) {
             return "cashWithdrawal";
         } else if (transaction.getDescription().equalsIgnoreCase("Funds added")) {
             return "addFunds";
@@ -351,7 +361,9 @@ public class User {
      * @param minAmount the minimum amount of the transaction
      * @return the number of transactions.
      */
-    public int countCardPaymentTransaction(final String accountIban, final double minAmount, final CommandContext context) {
+    public int countCardPaymentTransaction(final String accountIban,
+                                           final double minAmount,
+                                           final CommandContext context) {
         int count = 0;
         for (Transaction transaction : transactions) {
             if (!transaction.getAccount().equals(accountIban)) {
@@ -374,15 +386,26 @@ public class User {
                 count++;
             }
         }
-        System.out.println("S-au efectuat " + count + " tranzactii de tip card payment cu suma minima de " + minAmount + " RON.");
+        System.out.println("S-au efectuat " + count
+                        + " tranzactii de tip card payment cu suma minima de "
+                        + minAmount + " RON.");
         return count;
     }
 
-    public int getTransactionCountByCommerciant(final Commerciant commerciant, final List<Transaction> transactions) {
-        System.out.println("Calculating transaction count for commerciant: " + commerciant.getName());
+    /**
+     * Count the number of transactions made to the current commerciant
+     * @param commerciant the current commerciant
+     * @param transactions the list of transactions
+     * @return the number of transactions
+     */
+    public int getTransactionCountByCommerciant(final Commerciant commerciant,
+                                                final List<Transaction> transactions) {
+        System.out.println("Calculating transaction count for commerciant: "
+                            + commerciant.getName());
         int count = 1;
         for (Transaction transaction : transactions) {
-            System.out.println("Transaction " + transaction.getTimestamp() + " commerciant: " + transaction.getCommerciant());
+            System.out.println("Transaction " + transaction.getTimestamp()
+                                + " commerciant: " + transaction.getCommerciant());
             if (transaction.getCommerciant() == null) {
                 continue;
             }
@@ -395,38 +418,21 @@ public class User {
         return count;
     }
 
-    // Verifică dacă utilizatorul a primit cashback pentru o categorie specifică
-    public boolean hasReceivedCashback(String category) {
+    /**
+     * Check if the discount for this category has received
+     * @param category the category that has to be checked
+     * @return true if the category received cashback
+     */
+    public boolean hasReceivedCashback(final String category) {
         return receivedCashbacks.contains(category);
     }
 
-    // Marchează categoria ca fiind primită
-    public void setCashbackReceived(String category) {
+    /**
+     * Mark the received cashback
+     * @param category the category
+     */
+    public void setCashbackReceived(final String category) {
         receivedCashbacks.add(category);
-    }
-
-    public double getTotalSpending(Commerciant commerciant, CommandContext context) {
-
-        System.out.println("Incerc sa calculez total spending pentru comerciantul: " + commerciant.getName());
-        System.out.println("userul ale carui tranzactii le verific: " + this.getFirstName() + " " + this.getLastName() + " " + this.getEmail());
-        double totalSpending = 0;
-        for (Transaction transaction : this.getTransactions()) {
-            if (transaction.getCommerciant() == null) {
-                continue;
-            }
-
-            if (transaction.getCommerciant().equals(commerciant.getName())) {
-                System.out.println("Transaction amount: " + transaction.getAmount() + " " + transaction.getAmountCurrency());
-                try {
-                    totalSpending += context.getCurrencyConverter().convertCurrency(transaction.getAmount(),
-                            transaction.getAmountCurrency(), "RON");
-                } catch (CurrencyConversionException e) {
-                    System.out.println("Currency conversion failed: " + e.getMessage());
-                    return 0;
-                }
-            }
-        }
-        return totalSpending;
     }
 
     /**
@@ -445,13 +451,14 @@ public class User {
 
         List<Transaction> filteredTransactions = new ArrayList<>();
         for (Transaction transaction : user.getTransactions()) {
-            // Filtrăm tranzacțiile pentru contul specificat
+            // Select only the transactions for the current account
             if (!transaction.getAccount().equals(accountIban)) {
                 continue;
             }
 
-            // Verificăm dacă tranzacția se încadrează în intervalul de timp
-            if (transaction.getTimestamp() >= startTimestamp && transaction.getTimestamp() <= endTimestamp) {
+            // Check if the transactions match the time range
+            if (transaction.getTimestamp() >= startTimestamp
+                    && transaction.getTimestamp() <= endTimestamp) {
                 filteredTransactions.add(transaction);
             }
         }
