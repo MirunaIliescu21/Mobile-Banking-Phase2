@@ -5,7 +5,7 @@ import org.poo.commands.CommandContext;
 import java.util.ArrayList;
 import java.util.List;
 
-public class PaymentProcessor {
+public final class PaymentProcessor {
     private static PaymentProcessor instance = null; // Singleton instance
 
     private List<SplitPayment> commands = new ArrayList<>();
@@ -32,7 +32,7 @@ public class PaymentProcessor {
      *
      * @param payment the SplitPayment command to be added
      */
-    public void addSplitPayment(SplitPayment payment) {
+    public void addSplitPayment(final SplitPayment payment) {
         commands.add(payment);
     }
 
@@ -46,7 +46,8 @@ public class PaymentProcessor {
      */
     public void processResponse(final String email, final boolean isAccepted,
                                 final CommandContext context, final String paymentType) {
-        System.out.println("Processing response for email: " + email + " with isAccepted: " + isAccepted);
+        System.out.println("Processing response for email: " + email
+                            + " with isAccepted: " + isAccepted);
         System.out.println("Commands: " + commands.size());
 
         // Iterate through the list of split payment commands
@@ -55,7 +56,6 @@ public class PaymentProcessor {
 
             // Skip commands that do not match the specified payment type
             if (!command.getSplitPaymentType().equals(paymentType)) {
-                System.out.println("Procesarea nu este pentru acest tip de comanda");
                 continue;
             }
 

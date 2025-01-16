@@ -1,20 +1,28 @@
 package org.poo.services;
 
-import org.poo.models.Account;
-
+/**
+ * Represents the Gold Plan.
+ * This plan provides no transaction fees for its users.
+ */
 public class GoldPlan implements ServicePlan {
+
+    /**
+     * Gets the type of the plan.
+     * @return "gold" as the type of this plan.
+     */
     @Override
     public String getPlanType() {
         return "gold";
     }
 
+    /**
+     * Calculates the transaction fee for the Gold Plan.
+     * There is no fee for this plan.
+     * @param amount the transaction amount.
+     * @return 0, indicating no transaction fee.
+     */
     @Override
-    public double calculateTransactionFee(double amount) {
+    public double calculateTransactionFee(final double amount) {
         return 0; // No fee for gold
-    }
-
-    @Override
-    public boolean qualifiesForUpgrade(Account account) {
-        return false; // Gold is the highest tier
     }
 }

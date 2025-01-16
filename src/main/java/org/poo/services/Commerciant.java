@@ -47,7 +47,8 @@ public class Commerciant {
             }
             default -> {
                 System.out.println("Unknown cashback strategy: " + cashbackStrategy);
-                throw new IllegalArgumentException("Unknown cashback strategy: " + cashbackStrategy);
+                throw new IllegalArgumentException("Unknown cashback strategy: "
+                                                    + cashbackStrategy);
             }
         }
     }

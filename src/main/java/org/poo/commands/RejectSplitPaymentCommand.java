@@ -16,7 +16,8 @@ public class RejectSplitPaymentCommand implements Command {
      */
     @Override
     public void execute(final CommandInput command, final CommandContext context) {
-        System.out.println("rejectSplitPayment " + command.getTimestamp() + " for account " + command.getEmail());
+        System.out.println("rejectSplitPayment " + command.getTimestamp()
+                            + " for account " + command.getEmail());
         try {
             if (command.getEmail() == null) {
                 throw new IllegalArgumentException("User not found");
@@ -27,11 +28,13 @@ public class RejectSplitPaymentCommand implements Command {
             }
         } catch (IllegalArgumentException e) {
             System.out.println("User not found");
-            addError(context.getOutput(), e.getMessage(), command.getTimestamp(), command.getCommand());
+            addError(context.getOutput(), e.getMessage(),
+                    command.getTimestamp(), command.getCommand());
             return;
         }
         PaymentProcessor paymentProcessor = PaymentProcessor.getInstance();
-        paymentProcessor.processResponse(command.getEmail(), false, context, command.getSplitPaymentType());
+        paymentProcessor.processResponse(command.getEmail(), false,
+                                         context, command.getSplitPaymentType());
     }
 }
 

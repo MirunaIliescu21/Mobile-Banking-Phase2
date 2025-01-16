@@ -14,8 +14,17 @@ import java.util.List;
 import static org.poo.commands.CommandErrors.addError;
 
 public class UpgradePlanCommand implements Command {
+    private static final int FEE_STANDARD_TO_SILVER = 100;
+    private static final int FEE_STUDENT_TO_SILVER = 100;
+    private static final int FEE_SILVER_TO_GOLD = 250;
+    private static final int FEE_STANDARD_TO_GOLD = 350;
+    private static final int FEE_STUDENT_TO_GOLD = 350;
+    private static final int MIN_TRANSACTIONS = 5;
+    private static final int MIN_TRANSACTION_AMOUNT = 300;
+    private static final int GOLD_INDEX = 3;
     /**
-     * Upgrade the plan of a user. The user can upgrade from a standard or student plan to a silver and
+     * Upgrade the plan of a user. The user can upgrade from a standard or student plan
+     * to a silver or gold plan; also from silver to gold plan by paying a fee.
      * @param command the command to be executed
      * @param context the context of the command
      */
@@ -66,10 +75,11 @@ public class UpgradePlanCommand implements Command {
             return;
         }
 
-        int approvedTransactions = user.countCardPaymentTransaction(command.getAccount(), 300, context);
+        int approvedTransactions = user.countCardPaymentTransaction(command.getAccount(),
+                                                            MIN_TRANSACTION_AMOUNT, context);
         // If the current plan is silver and the user has at least 5 approved transactions
         // of at least 300 RON, the upgrade is made automatically to gold
-        if (currentPlanIndex == 2 && approvedTransactions >= 5) {
+        if (currentPlanIndex == 2 && approvedTransactions >= MIN_TRANSACTIONS) {
             user.setCurrentPlan(new GoldPlan());
             System.out.println("Userul a trecut automat la Gold");
             Transaction transaction = new Transaction.TransactionBuilder(command.getTimestamp(),
@@ -82,11 +92,21 @@ public class UpgradePlanCommand implements Command {
 
         // Calculate the fee for the upgrade (in RON)
         double fee = 0;
-        if (currentPlanIndex == 0 && newPlanIndex == 2) fee = 100; // standard to silver
-        if (currentPlanIndex == 1 && newPlanIndex == 2) fee = 100; // student to silver
-        if (currentPlanIndex == 2 && newPlanIndex == 3) fee = 250; // silver to gold
-        if (currentPlanIndex == 0 && newPlanIndex == 3) fee = 350; // standard to gold
-        if (currentPlanIndex == 1 && newPlanIndex == 3) fee = 350; // student to golf
+        if (currentPlanIndex == 0 && newPlanIndex == 2) {
+            fee = FEE_STANDARD_TO_SILVER; // standard to silver
+        }
+        if (currentPlanIndex == 1 && newPlanIndex == 2) {
+            fee = FEE_STUDENT_TO_SILVER; // student to silver
+        }
+        if (currentPlanIndex == 2 && newPlanIndex == GOLD_INDEX) {
+            fee = FEE_SILVER_TO_GOLD; // silver to gold
+        }
+        if (currentPlanIndex == 0 && newPlanIndex == GOLD_INDEX) {
+            fee = FEE_STANDARD_TO_GOLD; // standard to gold
+        }
+        if (currentPlanIndex == 1 && newPlanIndex == GOLD_INDEX) {
+            fee = FEE_STUDENT_TO_GOLD; // student to golf
+        }
 
         double convertedFee;
         try {
@@ -127,5 +147,4 @@ public class UpgradePlanCommand implements Command {
         user.addTransaction(transaction);
         System.out.println("Balance after upgrade is: " + account.getBalance());
     }
-
 }

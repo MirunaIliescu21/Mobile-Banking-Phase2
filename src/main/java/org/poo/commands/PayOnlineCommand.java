@@ -22,6 +22,22 @@ import static org.poo.models.User.findUserByEmail;
 public class PayOnlineCommand implements Command {
     private static final int SILVER_PAYMENTS_LIMIT = 5;
     private static final int SPENDING_LIMIT_FOR_SILVER = 300;
+
+    /**
+     * Inner class used to store the result of the search for the card.
+     */
+    public static class SearchCard {
+        private Card cardUser;
+        private Account accountUser;
+        private Account ownerAccount;
+
+        public SearchCard() {
+            this.cardUser = null;
+            this.accountUser = null;
+            this.ownerAccount = null;
+        }
+    }
+
     /**
      * Pay online with a specific card.
      * Add an error to the output if the user or the card is not found, or if the user
@@ -62,8 +78,6 @@ public class PayOnlineCommand implements Command {
                 throw new UserNotFoundException("User not found");
             }
             System.out.println("Userul este: " + user.getRole());
-//            Account ownerAccount = user.getOwnerAccount();
-//            System.out.println("ownerAccount: " + ownerAccount.getIban());
 
             // Search for the card in each account of the user
             for (Account account : user.getAccounts()) {
@@ -78,35 +92,11 @@ public class PayOnlineCommand implements Command {
             Account ownerAccount = user.getOwnerAccount();
             if (cardUser == null
                     && (!user.getRole().equals("owner") && !user.getRole().equals("user"))) {
-                System.out.println("Caut printe cardurile ownerului");
-
-                // TODO: trebuie sa caut ownerul care are contul cu cardul
-                for (User ownerUser : context.getUsers()) {
-                    for (Account businessAccount : ownerUser.getAccounts()) {
-                        // If the account is not a business account, continue
-                        if (!businessAccount.getType().equals("business")) {
-                            continue;
-                        }
-                        // If the associate is not found in this account, continue
-                        if (businessAccount.searchAssociateByEmail(command.getEmail()) == null) {
-                            continue;
-                        }
-                        if (businessAccount.findCardByNumber(cardNumber) != null) {
-                            System.out.println("Ownerul este: " + ownerUser.getEmail()
-                                    + " si are contul de business: "
-                                    + businessAccount.getIban());
-                            cardUser = businessAccount.findCardByNumber(cardNumber);
-                            accountUser = businessAccount;
-                            ownerAccount = businessAccount;
-                            break;
-                        }
-                    }
-                }
-
-//                if (ownerAccount.findCardByNumber(cardNumber) != null) {
-//                    cardUser = ownerAccount.findCardByNumber(cardNumber);
-//                    accountUser = ownerAccount;
-//                }
+                SearchCard result = new SearchCard();
+                searchUsersCard(command, context, cardNumber, result);
+                cardUser = result.cardUser;
+                accountUser = result.accountUser;
+                ownerAccount = result.ownerAccount;
             }
 
             // If the card was not found, add an error to the output
@@ -280,6 +270,39 @@ public class PayOnlineCommand implements Command {
                     .currentPlan(user.getCurrentPlan().getPlanType())
                     .build();
             user.addTransaction(upgradeTransaction);
+        }
+    }
+
+    /**
+     * Search for the card in the business accounts of the users.
+     * If the card is found, the card, the account and the owner account are stored in the result.
+     * @param command the command from the input
+     * @param context the context of the command
+     * @param cardNumber the card number to search for
+     * @param result where the search result will be stored
+     */
+    private static void searchUsersCard(final CommandInput command, final CommandContext context,
+                                        final String cardNumber, final SearchCard result) {
+        for (User ownerUser : context.getUsers()) {
+            for (Account businessAccount : ownerUser.getAccounts()) {
+                // If the account is not a business account, continue
+                if (!businessAccount.getType().equals("business")) {
+                    continue;
+                }
+                // If the associate is not found in this account, continue
+                if (businessAccount.searchAssociateByEmail(command.getEmail()) == null) {
+                    continue;
+                }
+                if (businessAccount.findCardByNumber(cardNumber) != null) {
+                    System.out.println("Ownerul is: " + ownerUser.getEmail()
+                            + " and the business account is: "
+                            + businessAccount.getIban());
+                    result.cardUser = businessAccount.findCardByNumber(cardNumber);
+                    result.accountUser = businessAccount;
+                    result.ownerAccount = businessAccount;
+                    break;
+                }
+            }
         }
     }
 }

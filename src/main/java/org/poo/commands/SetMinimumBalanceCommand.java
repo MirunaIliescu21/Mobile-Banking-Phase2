@@ -29,5 +29,4 @@ public class SetMinimumBalanceCommand implements Command {
                     command.getTimestamp(), "setMinimumBalance");
         }
     }
-
 }

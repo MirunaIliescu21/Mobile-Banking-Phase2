@@ -17,7 +17,8 @@ public class SplitPayment {
 
     private final String splitPaymentType; // Type of split payment ("equal" or "custom")
     private final List<String> accounts; // List of IBANs involved in the split payment
-    private final List<Double> amountsForUsers; // Amounts assigned to each user (for "custom" split type)
+    private final List<Double> amountsForUsers; // Amounts assigned to each user
+                                                // (for "custom" split type)
     private final String currency; // Currency of the payment
     private final double amount; // Total amount of the split payment
     private final int timestamp; // Timestamp of the payment creation
@@ -45,20 +46,6 @@ public class SplitPayment {
         }
         this.emailToAccount = emailToAccount;
         this.accountBalances = accountBalances;
-    }
-
-    /**
-     * Retrieves the accepted responses for a given split payment type.
-     *
-     * @param splitPaymentType The type of the split payment ("equal" or "custom").
-     * @return List of accepted responses for the split type.
-     */
-    public List<String> getAcceptedResponsesForType(String splitPaymentType) {
-        if (splitPaymentType.equals("custom")) {
-            return acceptedResponsesCustom;
-        } else {
-            return acceptedResponsesEqual;
-        }
     }
 
     /**
@@ -283,7 +270,8 @@ public class SplitPayment {
 
             account.setBalance(account.getBalance() - convertedAmount);
             // Add a transaction to the user
-            System.out.println("Se adauga tranzacatie pentru userul " + user.getEmail() + " cu accountul " + account.getIban());
+            System.out.println("Se adauga tranzacatie pentru userul " + user.getEmail()
+                                + " cu accountul " + account.getIban());
             Transaction successTransaction = new Transaction.TransactionBuilder(timestamp,
                     "Split payment of " + String.format("%.2f", amount) + " " + currency,
                     account.getIban(), "spending")

@@ -3,7 +3,7 @@ package org.poo.commands;
 import java.util.HashMap;
 import java.util.Map;
 
-public class CommandRegistry {
+public abstract class CommandRegistry {
     private static final Map<CommandType, Command> COMMANDS = new HashMap<>();
 
     // Private constructor to prevent instantiation
@@ -47,7 +47,7 @@ public class CommandRegistry {
      * @param type the type of the command
      * @return the instance of te current command
      */
-    public static Command getCommand(CommandType type) {
+    public static Command getCommand(final CommandType type) {
         return COMMANDS.getOrDefault(type, new DefaultCommand());
     }
 }

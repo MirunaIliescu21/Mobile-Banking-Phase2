@@ -351,7 +351,7 @@ public class User {
      * @return true if the user is of minimum age, false otherwise
      */
     public boolean isOfMinimumAge(final int minimumAge) {
-        LocalDate birthDate = LocalDate.parse(this.getBirthDate());
+        LocalDate birthDate = LocalDate.parse(this.birthDate);
         return Period.between(birthDate, LocalDate.now()).getYears() >= minimumAge;
     }
 

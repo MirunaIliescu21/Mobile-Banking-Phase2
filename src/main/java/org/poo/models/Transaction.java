@@ -209,10 +209,10 @@ public final class Transaction {
 
         /**
          * Set the split payment type for the transaction.
-         * @param type The split payment type
+         * @param model The split payment type
          */
-        public TransactionBuilder splitPaymentType(final String type) {
-            splitPaymentType = type;
+        public TransactionBuilder splitPaymentType(final String model) {
+            splitPaymentType = model;
             return this;
         }
 

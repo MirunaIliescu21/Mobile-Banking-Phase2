@@ -42,7 +42,7 @@ public class CommandContext {
      * @param name Name of the user
      * @return User with the given name
      */
-    public Commerciant findCommerciantByName(String name) {
+    public Commerciant findCommerciantByName(final String name) {
         for (Commerciant commerciant : commerciants) {
             if (commerciant.getName().equalsIgnoreCase(name)) {
                 return commerciant;
@@ -56,7 +56,7 @@ public class CommandContext {
      * @param iban IBAN of the commerciant
      * @return Commerciant with the given IBAN or null if not found
      */
-    public Commerciant findCommerciantByIban(String iban) {
+    public Commerciant findCommerciantByIban(final String iban) {
         for (Commerciant commerciant : commerciants) {
             if (commerciant.getAccount().equalsIgnoreCase(iban)) {
                 return commerciant;

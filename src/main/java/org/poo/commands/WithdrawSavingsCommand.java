@@ -9,6 +9,7 @@ import org.poo.models.User;
 import static org.poo.commands.CommandErrors.addError;
 
 public class WithdrawSavingsCommand implements Command {
+    private static final int MINIMUM_AGE = 21;
     /**
      * Withdraws money from a savings account and adds it to the user's classic account.
      * @param command the command to be executed
@@ -43,7 +44,7 @@ public class WithdrawSavingsCommand implements Command {
         }
 
         // Check if the user is of minimum age
-        if (!user.isOfMinimumAge(21)) {
+        if (!user.isOfMinimumAge(MINIMUM_AGE)) {
             Transaction transaction = new Transaction.TransactionBuilder(command.getTimestamp(),
                     "You don't have the minimum age required.", accountIBAN, "error")
                     .build();
@@ -53,7 +54,8 @@ public class WithdrawSavingsCommand implements Command {
 
         // Search if the user has a classic account with the same currency
         Account classicAccount = user.getAccounts().stream()
-                .filter(acc -> acc.getType().equals("classic") && acc.getCurrency().equals(currency))
+                .filter(acc -> acc.getType().equals("classic")
+                        && acc.getCurrency().equals(currency))
                 .findFirst().orElse(null);
 
         if (classicAccount == null) {

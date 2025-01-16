@@ -12,7 +12,7 @@ import java.util.List;
 /**
  * Class that executes the commands.
  */
-public class CommandExecutor {
+public final class CommandExecutor {
 
     private final CommandContext context;
 
@@ -25,6 +25,11 @@ public class CommandExecutor {
                                           output, currencyConverter);
     }
 
+    /**
+     * Executes the command.
+     * @param commandInput the input of the command
+     * @throws Exception if the command is not found
+     */
     public void execute(final CommandInput commandInput) throws Exception {
         CommandType commandType = CommandType.fromCommandName(commandInput.getCommand());
         Command command = CommandRegistry.getCommand(commandType);
