@@ -17,7 +17,8 @@ public class ChangeSpendingLimitCommand implements Command {
     public void execute(final CommandInput command, final CommandContext context) {
         Account account = User.findAccountByIBAN(context.getUsers(), command.getAccount());
         if (account == null) {
-            addError(context.getOutput(), "Account not found", command.getTimestamp(), "changeSpendingLimit");
+            addError(context.getOutput(), "Account not found",
+                     command.getTimestamp(), "changeSpendingLimit");
             return;
         }
 
@@ -32,14 +33,15 @@ public class ChangeSpendingLimitCommand implements Command {
             amountInRON = context.getCurrencyConverter().convertCurrency(command.getAmount(),
                     account.getCurrency(), "RON");
         } catch (CurrencyConversionException e) {
-            addError(context.getOutput(), e.getMessage(), command.getTimestamp(), "changeDepositLimit");
+            addError(context.getOutput(), e.getMessage(),
+                     command.getTimestamp(), "changeDepositLimit");
             return;
         }
         // Set the deposit limit in RON
         account.setSpendingLimit(amountInRON);
         System.out.println("Spending limit updated to " + command.getAmount()
                 + " " + account.getCurrency()
-                + " = "+  account.getSpendingLimit() + " RON at timestamp "
+                + " = " +  account.getSpendingLimit() + " RON at timestamp "
                 + command.getTimestamp());
     }
 }

@@ -39,8 +39,10 @@ public class BusinessReportCommand implements Command {
         double depositLimit = account.getDepositLimit();
         double spendingLimit = account.getSpendingLimit();
         try {
-            depositLimit = context.getCurrencyConverter().convertCurrency(depositLimit, "RON", account.getCurrency());
-            spendingLimit = context.getCurrencyConverter().convertCurrency(spendingLimit, "RON", account.getCurrency());
+            depositLimit = context.getCurrencyConverter().convertCurrency(depositLimit,
+                                                                "RON", account.getCurrency());
+            spendingLimit = context.getCurrencyConverter().convertCurrency(spendingLimit,
+                                                                "RON", account.getCurrency());
         } catch (CurrencyConversionException e) {
             addError(context.getOutput(), e.getMessage(),
                     command.getTimestamp(), command.getCommand());
@@ -81,7 +83,8 @@ public class BusinessReportCommand implements Command {
         context.getOutput().add(commandNode);
     }
 
-    private void generateTransactionReport(ObjectNode reportNode, CommandInput command, Account account, CommandContext context) {
+    private void generateTransactionReport(final ObjectNode reportNode, final CommandInput command,
+                                           final Account account, final CommandContext context) {
         System.out.println("Business report transaction " + account.getIban());
 
         ArrayNode managersArray = context.getObjectMapper().createArrayNode();
@@ -94,7 +97,6 @@ public class BusinessReportCommand implements Command {
         for (Map.Entry<String, String> entry : account.getAssociates().entrySet()) {
             String email = entry.getKey();
             String role = entry.getValue();
-            // System.out.println("email: " + email + " role: " + role);
 
             User user = User.findUserByEmail(context.getUsers(), email);
             if (user == null) {
@@ -107,9 +109,10 @@ public class BusinessReportCommand implements Command {
             double spent = 0;
             double deposited = 0;
 
-            // MAke the sum of the spent and deposited amounts
+            // Make the sum of the spent and deposited amounts
             for (Transaction transaction : transactions) {
-                // System.out.println("transaction type: " + transaction.getType() + " amount: " + transaction.getAmount());
+                // System.out.println("transaction type: " + transaction.getType()
+                // + " amount: " + transaction.getAmount());
                 if (transaction.getType().equals("spending")) {
                     spent += transaction.getAmount();
                 } else if (transaction.getType().equals("deposit")) {
@@ -140,7 +143,8 @@ public class BusinessReportCommand implements Command {
         reportNode.put("total deposited", totalDeposited);
     }
 
-    private void generateCommerciantReport(ObjectNode reportNode, CommandInput command, Account account, CommandContext context) {
+    private void generateCommerciantReport(final ObjectNode reportNode, final CommandInput command,
+                                           final Account account, final CommandContext context) {
         System.out.println("Business report commerciant " + account.getIban());
 
         // HashMap for commerciant data

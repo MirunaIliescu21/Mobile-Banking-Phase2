@@ -1,6 +1,11 @@
 package org.poo.commands;
 
-import org.poo.exceptions.*;
+import org.poo.exceptions.CardNotFoundException;
+import org.poo.exceptions.CurrencyConversionException;
+import org.poo.exceptions.InsufficientFundsException;
+import org.poo.exceptions.UnauthorizedCardAccessException;
+import org.poo.exceptions.UserNotFoundException;
+import org.poo.exceptions.UnauthorizedCardStatusException;
 import org.poo.fileio.CommandInput;
 import org.poo.models.Account;
 import org.poo.models.Card;
@@ -23,7 +28,8 @@ public class CashWithdrawalCommand implements Command {
      * @throws UnauthorizedCardStatusException if the card status is invalid
      */
     @Override
-    public void execute(final CommandInput command, final CommandContext context) throws UserNotFoundException,
+    public void execute(final CommandInput command, final CommandContext context)
+            throws UserNotFoundException,
             CardNotFoundException,
             UnauthorizedCardAccessException,
             InsufficientFundsException,
@@ -77,12 +83,14 @@ public class CashWithdrawalCommand implements Command {
                             "RON",
                             accountUser.getCurrency());
 
-            System.out.println("finalAmountInAccountCurrency: " + amountInAccountCurrency + " " + accountUser.getCurrency());
+            System.out.println("finalAmountInAccountCurrency: "
+                    + amountInAccountCurrency + " " + accountUser.getCurrency());
 
             // Check if the card is active amd if the account has enough funds
             double newBalance = accountUser.getBalance() - amountInAccountCurrency;
             System.out.println("newBalance: " + newBalance + " " + accountUser.getCurrency());
-            System.out.println("minimumBalance: " + accountUser.getMinimumBalance() + " " + accountUser.getCurrency());
+            System.out.println("minimumBalance: " + accountUser.getMinimumBalance()
+                                + " " + accountUser.getCurrency());
             if (newBalance < 0 || newBalance < accountUser.getMinimumBalance()) {
                 if (cardUser.getStatus().equals("active")
                         && amountInAccountCurrency > accountUser.getBalance()) {
@@ -96,7 +104,10 @@ public class CashWithdrawalCommand implements Command {
             if (cardUser.getStatus().equals("active")
                     && accountUser.getBalance() >= accountUser.getMinimumBalance()) {
                 cardUser.setStatus("active");
-                System.out.println("S-au extras bani CU SUCCES account balance " + accountUser.getIban() + " plata online: " + accountUser.getBalance() + " " + accountUser.getCurrency());
+                System.out.println("S-au extras bani CU SUCCES account balance "
+                                    + accountUser.getIban() + " plata online: "
+                                    + accountUser.getBalance() + " "
+                                    + accountUser.getCurrency());
                 Transaction transaction = new Transaction.TransactionBuilder(timestamp,
                         "Cash withdrawal of " + amount, accountUser.getIban(), "spending")
                         .amount(amount)
@@ -110,8 +121,8 @@ public class CashWithdrawalCommand implements Command {
                 accountUser.setBalance(accountUser.getBalance() + finalAmount);
                 throw new UnauthorizedCardStatusException("The card is frozen");
             }
-        } catch (UserNotFoundException | CardNotFoundException | UnauthorizedCardAccessException |
-                 CurrencyConversionException e) {
+        } catch (UserNotFoundException | CardNotFoundException | UnauthorizedCardAccessException
+                 | CurrencyConversionException e) {
             addError(context.getOutput(), e.getMessage(), timestamp, "cashWithdrawal");
         } catch (InsufficientFundsException | UnauthorizedCardStatusException e) {
             // Add a transaction to the account

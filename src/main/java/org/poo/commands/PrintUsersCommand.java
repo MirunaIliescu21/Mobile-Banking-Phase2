@@ -8,12 +8,12 @@ import org.poo.models.Card;
 import org.poo.models.User;
 
 public class PrintUsersCommand implements Command {
-    @Override
     /**
      * Print the users and their accounts to the output file in format JSON.
      * @param command the command to be executed
      * @param context the context of the command
      */
+    @Override
     public void execute(final CommandInput command, final CommandContext context) {
         ArrayNode userOutput = context.getObjectMapper().createArrayNode();
         for (User user : context.getUsers()) {

@@ -10,12 +10,12 @@ import org.poo.utils.Utils;
 import static org.poo.models.User.findUserByEmail;
 
 public class CreateCardCommand implements Command {
-    @Override
     /**
      * Create a card for a specific account.
      * Add a new transaction to the user.
      * @param command the command to be executed
      */
+    @Override
     public void execute(final CommandInput command, final CommandContext context) {
         User user = findUserByEmail(context.getUsers(), command.getEmail());
         if (user != null) {

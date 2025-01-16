@@ -21,7 +21,8 @@ public class CommandExecutor {
                            final ObjectMapper objectMapper,
                            final ArrayNode output,
                            final CurrencyConverter currencyConverter) {
-        this.context = new CommandContext(users, commerciants, objectMapper, output, currencyConverter);
+        this.context = new CommandContext(users, commerciants, objectMapper,
+                                          output, currencyConverter);
     }
 
     public void execute(final CommandInput commandInput) throws Exception {

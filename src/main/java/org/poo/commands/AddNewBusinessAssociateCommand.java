@@ -32,7 +32,7 @@ public class AddNewBusinessAssociateCommand implements Command {
         user.setRole(command.getRole());
         account.addAssociate(command.getEmail(), command.getRole());
         System.out.println("Added new associate: " + command.getTimestamp()
-                            + " "+ command.getEmail() + " as " + command.getRole()
+                            + " " + command.getEmail() + " as " + command.getRole()
                             + " to account " + account.getIban());
     }
 }

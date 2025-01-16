@@ -12,7 +12,6 @@ import static org.poo.commands.CommandErrors.addError;
 import static org.poo.commands.CommandErrors.addErrorDescription;
 
 public class DeleteAccountCommand implements  Command {
-    @Override
     /**
      * Deletes an account from a user and sets the status of all the cards to "destroyed".
      * If the account has a balance different from 0, throws an exception.
@@ -21,6 +20,7 @@ public class DeleteAccountCommand implements  Command {
      * @param commandInput the command to be executed
      * @param context the command execution context
      */
+    @Override
     public void execute(final CommandInput commandInput,
                               final CommandContext context) {
         String accountIban = commandInput.getAccount();

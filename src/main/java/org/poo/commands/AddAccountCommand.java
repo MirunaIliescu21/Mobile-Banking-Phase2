@@ -11,12 +11,12 @@ import static org.poo.commands.CommandErrors.addError;
 import static org.poo.models.User.findUserByEmail;
 
 public class AddAccountCommand implements  Command {
-    @Override
     /**
      * Add an account to a user.
      * Add a new Transaction to the user.
      * @param command the command to be executed
      */
+    @Override
     public void execute(final CommandInput command, final CommandContext context) {
         System.out.println("addAccount " + command.getTimestamp() + " " + command.getAccountType());
         User user = findUserByEmail(context.getUsers(), command.getEmail());
@@ -45,6 +45,5 @@ public class AddAccountCommand implements  Command {
             addError(context.getOutput(), e.getMessage(),
                     command.getTimestamp(), "addAccount");
         }
-
     }
 }

@@ -13,12 +13,12 @@ import static org.poo.commands.CommandErrors.addError;
 import static org.poo.models.User.findUserByEmail;
 
 public class CreateOneTimeCardCommand implements Command {
-    @Override
     /**
      * Create a "one time pay" card for a specific account.
      * Add a new transaction to the user.
      * @param command the command to be executed
      */
+    @Override
     public void execute(final CommandInput command, final CommandContext context) {
         try {
             User user = findUserByEmail(context.getUsers(), command.getEmail());

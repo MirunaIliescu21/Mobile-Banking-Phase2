@@ -10,12 +10,12 @@ import static org.poo.commands.CommandErrors.addError;
 import static org.poo.models.User.findUserByEmail;
 
 public class DeleteCardCommand implements Command {
-    @Override
     /**
      * Delete a specific card and set its status to "destroyed".
      * Add a new transaction to the user.
      * @param command the command to be executed
      */
+    @Override
     public void execute(final CommandInput command,
                            final CommandContext context) {
         String email = command.getEmail();
