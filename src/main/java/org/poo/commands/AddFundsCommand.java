@@ -40,6 +40,7 @@ public class AddFundsCommand implements Command {
 
         System.out.println("emailUser: " + emailUser.getEmail() + " " + emailUser.getRole());
 
+        // Check if the user is an employee or manager for the business account
         for (User user : context.getUsers()) {
             Account account = user.findAccountByIban(command.getAccount());
             if (account == null) {
@@ -48,8 +49,20 @@ public class AddFundsCommand implements Command {
             System.out.println("account: " + account.getIban() + " "
                                 + account.getCurrency() + " type: " + account.getType());
 
+            String role = null;
+            if (account.getType().equals("business")) {
+                // search for the associate with de current email
+                role = account.searchAssociateByEmail(command.getEmail());
+                System.out.println("the role for the user " + command.getEmail() + " is: " + role);
+            }
+
+            if (role == null) {
+                System.out.println("The user is not an associate for this account.");
+                continue;
+            }
+
             // Add funds to the owner's account
-            if (!emailUser.getRole().equals("employee")) {
+            if (!role.equals("employee")) {
                 AddFundsCommand.addFunds(account, emailUser, command);
                 break;
             }

@@ -96,6 +96,21 @@ public class Account {
     }
 
     /**
+     * Search for an associate by email
+     * @param email the email of the associate
+     * @return the role of the associate
+     */
+    public String searchAssociateByEmail(final String email) {
+        for (String key : associates.keySet()) {
+            if (key.equals(email)) {
+                System.out.println("Found associate: " + key + " " + associates.get(key));
+                return associates.get(key);
+            }
+        }
+        return null;
+    }
+
+    /**
      * Check if the user is authorized to do the current operation
      * @param email the user's email
      * @param action the name of operation
