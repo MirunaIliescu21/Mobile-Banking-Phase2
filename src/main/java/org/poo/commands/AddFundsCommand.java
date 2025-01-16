@@ -1,5 +1,6 @@
 package org.poo.commands;
 
+import org.poo.exceptions.CurrencyConversionException;
 import org.poo.fileio.CommandInput;
 import org.poo.models.Account;
 import org.poo.models.Transaction;
@@ -14,7 +15,8 @@ public class AddFundsCommand implements Command {
      * @param command the command to be executed
      */
     @Override
-    public void execute(final CommandInput command, final CommandContext context) {
+    public void execute(final CommandInput command, final CommandContext context)
+                            throws CurrencyConversionException {
         System.out.println("addFunds " + command.getTimestamp());
         User emailUser = findUserByEmail(context.getUsers(), command.getEmail());
         if (emailUser == null) {
@@ -24,6 +26,12 @@ public class AddFundsCommand implements Command {
         }
         Account userAccount = emailUser.findAccountByIban(command.getAccount());
 
+        // Check if the user is a user and the account is his
+        if (emailUser.getRole().equals("user") && userAccount == null) {
+            System.out.println("Account not found for this user.");
+            return;
+        }
+
         // Add funds to the user's account
         if (userAccount != null) {
             AddFundsCommand.addFunds(userAccount, emailUser, command);
@@ -31,9 +39,27 @@ public class AddFundsCommand implements Command {
         }
 
         System.out.println("emailUser: " + emailUser.getEmail() + " " + emailUser.getRole());
+
         for (User user : context.getUsers()) {
             Account account = user.findAccountByIban(command.getAccount());
-            if (account != null && !emailUser.getRole().equals("employee")) {
+            if (account == null) {
+                continue;
+            }
+            System.out.println("account: " + account.getIban() + " "
+                                + account.getCurrency() + " type: " + account.getType());
+
+            // Add funds to the owner's account
+            if (!emailUser.getRole().equals("employee")) {
+                AddFundsCommand.addFunds(account, emailUser, command);
+                break;
+            }
+
+            // If the user is an employee, check if the amount is less than the deposit limit
+            double amountInRON = context.getCurrencyConverter().convertCurrency(command.getAmount(),
+                                                               account.getCurrency(), "RON");
+            if (amountInRON <= account.getDepositLimit()) {
+                System.out.println("Suma " + amountInRON + " este mai mica sau egala"
+                        + " cu limita de depunere " + account.getDepositLimit());
                 AddFundsCommand.addFunds(account, emailUser, command);
                 break;
             }
@@ -46,7 +72,8 @@ public class AddFundsCommand implements Command {
      * @param user the user that owns the account
      * @param command the command to be executed
      */
-    private static void addFunds(Account account, User user, CommandInput command) {
+    private static void addFunds(final Account account, final User user,
+                                 final CommandInput command) {
         account.addFunds(command.getAmount());
         System.out.println("S-au adaugat: " + command.getAmount());
         System.out.println("account balance " + account.getIban()
