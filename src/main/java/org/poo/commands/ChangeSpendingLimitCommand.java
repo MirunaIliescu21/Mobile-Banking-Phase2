@@ -28,13 +28,19 @@ public class ChangeSpendingLimitCommand implements Command {
             return;
         }
 
+        if (!account.getType().equals("business")) {
+            addError(context.getOutput(), "This is not a business account",
+                     command.getTimestamp(), "changeSpendingLimit");
+            return;
+        }
+
         double amountInRON = 0;
         try {
             amountInRON = context.getCurrencyConverter().convertCurrency(command.getAmount(),
                     account.getCurrency(), "RON");
         } catch (CurrencyConversionException e) {
             addError(context.getOutput(), e.getMessage(),
-                     command.getTimestamp(), "changeDepositLimit");
+                     command.getTimestamp(), "changeSpendingLimit");
             return;
         }
         // Set the deposit limit in RON

@@ -28,6 +28,12 @@ public class AddNewBusinessAssociateCommand implements Command {
                     command.getTimestamp(), "addNewBusinessAssociate");
             return;
         }
+
+        if (account.getOwner().equals(command.getEmail())) {
+            System.out.println("account owner: " + account.getOwner()
+                                + " command email: " + command.getEmail());
+            return;
+        }
         user.setOwnerAccount(account);
         user.setRole(command.getRole());
         account.addAssociate(command.getEmail(), command.getRole());

@@ -62,7 +62,8 @@ public class PayOnlineCommand implements Command {
                 throw new UserNotFoundException("User not found");
             }
             System.out.println("Userul este: " + user.getRole());
-            Account ownerAccount = user.getOwnerAccount();
+//            Account ownerAccount = user.getOwnerAccount();
+//            System.out.println("ownerAccount: " + ownerAccount.getIban());
 
             // Search for the card in each account of the user
             for (Account account : user.getAccounts()) {
@@ -72,15 +73,42 @@ public class PayOnlineCommand implements Command {
                     break;
                 }
             }
-            // Search for the card in each account of the user
+
+            // Search for the card in each account of the owner
+            Account ownerAccount = user.getOwnerAccount();
             if (cardUser == null
                     && (!user.getRole().equals("owner") && !user.getRole().equals("user"))) {
                 System.out.println("Caut printe cardurile ownerului");
-                if (ownerAccount.findCardByNumber(cardNumber) != null) {
-                    cardUser = ownerAccount.findCardByNumber(cardNumber);
-                    accountUser = ownerAccount;
+
+                // TODO: trebuie sa caut ownerul care are contul cu cardul
+                for (User ownerUser : context.getUsers()) {
+                    for (Account businessAccount : ownerUser.getAccounts()) {
+                        // If the account is not a business account, continue
+                        if (!businessAccount.getType().equals("business")) {
+                            continue;
+                        }
+                        // If the associate is not found in this account, continue
+                        if (businessAccount.searchAssociateByEmail(command.getEmail()) == null) {
+                            continue;
+                        }
+                        if (businessAccount.findCardByNumber(cardNumber) != null) {
+                            System.out.println("Ownerul este: " + ownerUser.getEmail()
+                                    + " si are contul de business: "
+                                    + businessAccount.getIban());
+                            cardUser = businessAccount.findCardByNumber(cardNumber);
+                            accountUser = businessAccount;
+                            ownerAccount = businessAccount;
+                            break;
+                        }
+                    }
                 }
+
+//                if (ownerAccount.findCardByNumber(cardNumber) != null) {
+//                    cardUser = ownerAccount.findCardByNumber(cardNumber);
+//                    accountUser = ownerAccount;
+//                }
             }
+
             // If the card was not found, add an error to the output
             if (cardUser == null) {
                 throw new CardNotFoundException("Card not found");
