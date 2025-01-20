@@ -7,7 +7,7 @@ import org.poo.models.Transaction;
  * This class implements the TransactionHandler interface and
  * encapsulates the logic for creating a new card.
  */
-public class CreateCardHandler implements TransactionHandler {
+public class CreateCardHandler implements TransactionHandlerStrategy {
     /**
      *  Adds the involved card (card) to the transaction JSON.
      *  Includes the cardholder and account of the transaction.

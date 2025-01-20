@@ -4,7 +4,7 @@ package org.poo.services;
  * Represents the Gold Plan.
  * This plan provides no transaction fees for its users.
  */
-public class GoldPlan implements ServicePlan {
+public class GoldPlan implements ServicePlanStrategy {
 
     /**
      * Gets the type of the plan.

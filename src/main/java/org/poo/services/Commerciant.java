@@ -35,18 +35,14 @@ public class Commerciant {
      * @throws IllegalArgumentException If the cashback strategy is unknown.
      */
     public CashbackStrategy getCashbackStrategyInstance() throws IllegalArgumentException {
-        System.out.println("Cashback strategy in class Commerciant: " + this.cashbackStrategy);
         switch (this.cashbackStrategy) {
             case "nrOfTransactions" -> {
-                System.out.println("NrOfTransactionsCashback");
                 return new NrOfTransactionsCashback();
             }
             case "spendingThreshold" -> {
-                System.out.println("SpendingThresholdCashback");
                 return new SpendingThresholdCashback();
             }
             default -> {
-                System.out.println("Unknown cashback strategy: " + cashbackStrategy);
                 throw new IllegalArgumentException("Unknown cashback strategy: "
                                                     + cashbackStrategy);
             }

@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.poo.handlers.AddFundsHandler;
 import org.poo.handlers.BankTransferHandler;
 import org.poo.handlers.CreateCardHandler;
-import org.poo.handlers.TransactionHandler;
+import org.poo.handlers.TransactionHandlerStrategy;
 import org.poo.handlers.CardDestroyedHandler;
 import org.poo.handlers.CardPaymentHandler;
 import org.poo.handlers.SplitPaymentHandler;
@@ -27,7 +27,8 @@ import java.util.Map;
  * and a JSON representation of the transaction to trigger the appropriate logic.
  */
 public abstract class TransactionExecutor {
-    private static final Map<String, TransactionHandler> TRANSACTION_HANDLERS = new HashMap<>();
+    private static final Map<String, TransactionHandlerStrategy>
+            TRANSACTION_HANDLERS = new HashMap<>();
 
     static {
         TRANSACTION_HANDLERS.put("bankTransfer", new BankTransferHandler());
@@ -42,7 +43,7 @@ public abstract class TransactionExecutor {
         TRANSACTION_HANDLERS.put("addFunds", new AddFundsHandler());
 
         // Use DefaultTransactionHandler for non-specific cases
-        TransactionHandler defaultHandler = new DefaultTransactionHandler();
+        TransactionHandlerStrategy defaultHandler = new DefaultTransactionHandler();
         TRANSACTION_HANDLERS.put("insufficientFunds", defaultHandler);
         TRANSACTION_HANDLERS.put("createAccount", defaultHandler);
         TRANSACTION_HANDLERS.put("checkStatusCard", defaultHandler);
@@ -50,6 +51,7 @@ public abstract class TransactionExecutor {
 
     /**
      * Executes the transaction based on the transaction type.
+     * This dynamic handler selection is typical of the Strategy pattern in action.
      * @param type the type of the transaction
      * @param transaction the transaction object
      * @param transactionJson the JSON representation of the transaction
@@ -57,7 +59,7 @@ public abstract class TransactionExecutor {
     public static void executeTransaction(final String type,
                                           final Transaction transaction,
                                           final ObjectNode transactionJson) {
-        TransactionHandler handler = TRANSACTION_HANDLERS.get(type);
+        TransactionHandlerStrategy handler = TRANSACTION_HANDLERS.get(type);
         if (handler != null) {
             handler.handleTransaction(transaction, transactionJson);
         } else {

@@ -3,7 +3,7 @@ package org.poo.handlers;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.poo.models.Transaction;
 
-public class AddInterestHandler implements TransactionHandler {
+public class AddInterestHandler implements TransactionHandlerStrategy {
     /**
      * Adds the transaction details to the JSON object: amount, currency
      * @param transaction The transaction to be handled

@@ -7,7 +7,7 @@ import org.poo.models.Transaction;
  * Each implementation of this interface encapsulates
  * the logic for handling a particular transaction type.
  */
-public interface TransactionHandler {
+public interface TransactionHandlerStrategy {
     /**
      * This method promotes single responsibility by delegating transactions to separate handlers.
      * Enables extensibility by allowing new handlers to be added without modifying existing code.

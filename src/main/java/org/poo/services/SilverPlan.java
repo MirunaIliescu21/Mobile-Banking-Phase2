@@ -4,7 +4,7 @@ package org.poo.services;
  * Represents the Silver Plan.
  * This plan charges no fee for transactions under 500 RON, and a fee of 0.1% for larger amounts.
  */
-public class SilverPlan implements ServicePlan {
+public class SilverPlan implements ServicePlanStrategy {
     private static final double TRANSACTION_FEE = 0.001;
     private static final double MAX_TRANSACTION_FEE = 500;
     /**

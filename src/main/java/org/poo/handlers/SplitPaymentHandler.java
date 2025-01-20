@@ -9,7 +9,7 @@ import org.poo.models.Transaction;
  * This class implements the TransactionHandler interface and
  * encapsulates the logic for handling split payment transactions.
  */
-public class SplitPaymentHandler implements TransactionHandler {
+public class SplitPaymentHandler implements TransactionHandlerStrategy {
     /**
      * Adds the involved accounts (involvedAccounts) to the transaction JSON.
      * Includes the currency and amount of the transaction.

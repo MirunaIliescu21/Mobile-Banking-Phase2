@@ -3,7 +3,7 @@ package org.poo.services;
 /**
  * Represents a service plan interface that defines the common behavior of all service plans.
  */
-public interface ServicePlan {
+public interface ServicePlanStrategy {
 
     /**
      * Gets the type of the plan as a string.

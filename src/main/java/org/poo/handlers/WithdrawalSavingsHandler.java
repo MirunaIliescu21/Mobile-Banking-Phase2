@@ -3,7 +3,7 @@ package org.poo.handlers;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.poo.models.Transaction;
 
-public class WithdrawalSavingsHandler implements TransactionHandler {
+public class WithdrawalSavingsHandler implements TransactionHandlerStrategy {
     /**
      * Adds the transaction details to the JSON object:
      * amount, classicAccountIBAN, savingsAccountIBAN

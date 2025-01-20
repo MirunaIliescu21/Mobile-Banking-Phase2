@@ -7,7 +7,7 @@ import org.poo.models.Transaction;
  * Handles the logic for a "addFunds" transaction,
  * but this transaction is not printed in the JSON file.
  */
-public class AddFundsHandler implements TransactionHandler {
+public class AddFundsHandler implements TransactionHandlerStrategy {
     /**
      * Handles the logic for a "addFunds" transaction.
      * This transaction is not printed in the JSON file.

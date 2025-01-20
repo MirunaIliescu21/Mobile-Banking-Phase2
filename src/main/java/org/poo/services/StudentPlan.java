@@ -4,7 +4,7 @@ package org.poo.services;
  * Represents the Student Plan.
  * This plan provides no transaction fees for its users.
  */
-public class StudentPlan implements ServicePlan {
+public class StudentPlan implements ServicePlanStrategy {
 
     /**
      * Gets the type of the plan.

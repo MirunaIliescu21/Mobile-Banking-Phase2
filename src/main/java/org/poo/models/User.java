@@ -6,9 +6,8 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.Data;
 import org.poo.commands.CommandContext;
 import org.poo.exceptions.CurrencyConversionException;
-import org.poo.services.ServicePlan;
-import org.poo.services.StandardPlan;
-import org.poo.services.StudentPlan;
+import org.poo.services.ServicePlanStrategy;
+import org.poo.services.ServicePlanFactory;
 import org.poo.services.Commerciant;
 
 import java.time.LocalDate;
@@ -33,7 +32,7 @@ public class User {
     private List<Transaction> transactions;
     private final String birthDate;
     private final String occupation;
-    private ServicePlan currentPlan;
+    private ServicePlanStrategy currentPlan;
     private Set<String> receivedCashbacks = new HashSet<>(); // Ex. "Food", "Clothes", "Tech"
     private String role;
     private Account ownerAccount;
@@ -51,7 +50,8 @@ public class User {
         this.birthDate = birthDate;
         this.occupation = occupation;
         // Set the default plan based on the occupation
-        currentPlan = occupation.equals("student") ? new StudentPlan() : new StandardPlan();
+//        currentPlan = occupation.equals("student") ? new StudentPlan() : new StandardPlan();
+        currentPlan = ServicePlanFactory.createServicePlan(occupation);
         totalSpendingThreshold = 0;
         ownerAccount = null;
         role = "user";

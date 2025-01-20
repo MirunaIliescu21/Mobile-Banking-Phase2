@@ -5,9 +5,8 @@ import org.poo.fileio.CommandInput;
 import org.poo.models.Account;
 import org.poo.models.Transaction;
 import org.poo.models.User;
-import org.poo.services.GoldPlan;
-import org.poo.services.ServicePlan;
-import org.poo.services.SilverPlan;
+import org.poo.services.ServicePlanFactory;
+import org.poo.services.ServicePlanStrategy;
 
 import java.util.List;
 
@@ -80,8 +79,8 @@ public class UpgradePlanCommand implements Command {
         // If the current plan is silver and the user has at least 5 approved transactions
         // of at least 300 RON, the upgrade is made automatically to gold
         if (currentPlanIndex == 2 && approvedTransactions >= MIN_TRANSACTIONS) {
-            user.setCurrentPlan(new GoldPlan());
-            System.out.println("Userul a trecut automat la Gold");
+            ServicePlanStrategy newPlan = ServicePlanFactory.createServicePlan("gold");
+            user.setCurrentPlan(newPlan);
             Transaction transaction = new Transaction.TransactionBuilder(command.getTimestamp(),
                     "Upgrade plan", accountIBAN, "upgrade")
                     .currentPlan(user.getCurrentPlan().getPlanType())
@@ -120,7 +119,6 @@ public class UpgradePlanCommand implements Command {
         System.out.println("convertedFee: " + convertedFee + " " + account.getCurrency());
         double commission = user.getCurrentPlan().calculateTransactionFee(convertedFee);
         System.out.println("commission: " + commission);
-        // convertedFee += commission;
 
         // Check if the account has enough funds for the upgrade
         if (account.getBalance() < convertedFee) {
@@ -133,11 +131,7 @@ public class UpgradePlanCommand implements Command {
         // Debit the fee from the account
         account.setBalance(account.getBalance() - convertedFee);
         System.out.println("account balance: " + account.getBalance());
-        ServicePlan newPlan = switch (newPlanType) {
-            case "silver" -> new SilverPlan();
-            case "gold" -> new GoldPlan();
-            default -> throw new IllegalArgumentException("Invalid plan type");
-        };
+        ServicePlanStrategy newPlan = ServicePlanFactory.createServicePlan(newPlanType);
         user.setCurrentPlan(newPlan);
 
         Transaction transaction = new Transaction.TransactionBuilder(command.getTimestamp(),

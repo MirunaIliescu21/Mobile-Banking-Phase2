@@ -4,7 +4,7 @@ package org.poo.services;
  * Represents the Standard Plan.
  * This plan charges a transaction fee of 0.2% of the transaction amount.
  */
-public class StandardPlan implements ServicePlan {
+public class StandardPlan implements ServicePlanStrategy {
     private static final double TRANSACTION_FEE = 0.002;
     /**
      * Gets the type of the plan.

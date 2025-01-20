@@ -3,7 +3,7 @@ package org.poo.handlers;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.poo.models.Transaction;
 
-public class UpgradePlanHandler implements TransactionHandler {
+public class UpgradePlanHandler implements TransactionHandlerStrategy {
     /**
      * Adds the transaction details to the JSON object: accountIBAN, newPlanType
      * @param transaction The transaction to be handled

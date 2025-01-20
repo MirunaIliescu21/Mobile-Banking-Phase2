@@ -7,7 +7,7 @@ import org.poo.models.Transaction;
  * This class implements the TransactionHandler interface and
  * encapsulates the logic for handling card payment transactions.
  */
-public class CardPaymentHandler implements TransactionHandler {
+public class CardPaymentHandler implements TransactionHandlerStrategy {
     /**
      * Includes the payment amount and the merchant's details in the transaction JSON.
      * @param transaction The transaction to be handled.

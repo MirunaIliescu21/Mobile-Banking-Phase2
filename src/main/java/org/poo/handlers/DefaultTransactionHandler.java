@@ -6,7 +6,7 @@ import org.poo.models.Transaction;
 /**
  * Default handler for transactions with no specific processing logic.
  */
-public class DefaultTransactionHandler implements TransactionHandler {
+public class DefaultTransactionHandler implements TransactionHandlerStrategy {
     /**
      *  Adds only basic transaction details (timestamp, description).
      *  Can be extended in the future for additional generic behavior.

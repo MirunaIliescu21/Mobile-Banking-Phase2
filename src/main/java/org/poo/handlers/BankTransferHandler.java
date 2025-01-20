@@ -7,7 +7,7 @@ import org.poo.models.Transaction;
  * This class implements the TransactionHandler interface and
  * encapsulates the logic for handling bank transfer transactions.
  */
-public class BankTransferHandler implements TransactionHandler {
+public class BankTransferHandler implements TransactionHandlerStrategy {
     /**
      * Adds the sender and receiver IBANs, transfer amount, and the transfer type
      * to the transaction JSON.
